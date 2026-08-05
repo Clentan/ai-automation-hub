@@ -1,6 +1,6 @@
 import { useFlowsContext } from '@/lib/flows-context';
 import { formatDistanceToNow } from 'date-fns';
-import { Activity, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, Clock, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
 
@@ -10,57 +10,62 @@ export default function ActivityLog() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
-      <div className="border-b bg-background sticky top-0 z-10 px-6 py-8">
-        <div className="max-w-4xl mx-auto w-full">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Run Activity</h1>
-          <p className="text-muted-foreground">Monitor the execution history of your automated flows.</p>
+      <div className="border-b border-border/60 bg-background sticky top-0 z-10 px-6 py-8 md:py-10">
+        <div className="max-w-4xl mx-auto w-full flex items-start gap-4">
+          <div className="bg-primary/10 text-primary p-3 rounded-2xl shrink-0">
+            <Activity className="h-7 w-7" />
+          </div>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2 text-foreground">Run Activity</h1>
+            <p className="text-muted-foreground text-lg">Monitor the execution history of your automated flows.</p>
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto bg-secondary/10">
-        <div className="p-6 max-w-4xl mx-auto w-full">
+        <div className="p-6 md:p-8 max-w-4xl mx-auto w-full pb-20">
           {activity.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="h-16 w-16 bg-muted rounded-2xl flex items-center justify-center mb-4">
-                <Activity className="h-8 w-8 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-border/60 rounded-3xl bg-card shadow-sm animate-in fade-in duration-500">
+              <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                <Activity className="h-10 w-10 text-primary/70" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">No activity yet</h3>
-              <p className="text-muted-foreground max-w-sm mb-6">
-                When your flows run, their execution history will appear here.
+              <h3 className="text-2xl font-bold mb-3">No activity yet</h3>
+              <p className="text-muted-foreground max-w-sm mb-8 text-lg">
+                When your flows run, their execution history will appear here. Turn on a flow to get started.
               </p>
-              <Button onClick={() => setLocation('/')} variant="outline" className="rounded-full">
-                Go to Gallery
+              <Button onClick={() => setLocation('/templates')} className="rounded-full shadow-md px-8 gap-2">
+                <Zap className="h-4 w-4" /> Go to Gallery
               </Button>
             </div>
           ) : (
-            <div className="space-y-4 relative">
-              <div className="absolute left-6 top-8 bottom-8 w-px bg-border hidden md:block" />
+            <div className="space-y-5 relative">
+              <div className="absolute left-6 top-8 bottom-8 w-px bg-border/80 hidden md:block" />
               
               {activity.map((log, i) => (
                 <div 
                   key={log.id}
-                  className="flex gap-4 relative animate-in fade-in slide-in-from-bottom-4"
+                  className="flex gap-6 relative animate-in fade-in slide-in-from-bottom-4"
                   style={{ animationDelay: `${i * 30}ms`, animationFillMode: 'both' }}
                 >
-                  <div className="hidden md:flex shrink-0 w-12 items-center justify-center pt-1 z-10">
-                    <div className="h-4 w-4 rounded-full bg-background border-2 border-border shadow-sm flex items-center justify-center">
-                      <div className={`h-2 w-2 rounded-full ${log.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <div className="hidden md:flex shrink-0 w-12 items-center justify-center pt-3 z-10">
+                    <div className="h-5 w-5 rounded-full bg-card border-2 border-border shadow-sm flex items-center justify-center">
+                      <div className={`h-2.5 w-2.5 rounded-full ${log.status === 'success' ? 'bg-emerald-500 shadow-[0_0_8px_theme(colors.emerald.500)]' : 'bg-red-500 shadow-[0_0_8px_theme(colors.red.500)]'}`} />
                     </div>
                   </div>
                   
-                  <div className="flex-1 bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex-1 bg-card border border-border/60 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-5 group">
                     <div>
-                      <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex items-center gap-2.5 mb-2">
                         {log.status === 'success' ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                         ) : (
-                          <XCircle className="h-4 w-4 text-red-500" />
+                          <XCircle className="h-5 w-5 text-red-500" />
                         )}
-                        <span className="font-medium text-foreground">{log.flowName}</span>
+                        <span className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">{log.flowName}</span>
                       </div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-3">
+                      <div className="text-sm font-medium text-muted-foreground flex items-center gap-4 pl-7.5">
                         <span>{formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}</span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5" />
                           {log.durationMs}ms
                         </span>
@@ -69,9 +74,9 @@ export default function ActivityLog() {
                     
                     <div className="shrink-0 text-sm">
                       {log.status === 'success' ? (
-                        <span className="text-green-600 font-medium bg-green-500/10 px-2.5 py-1 rounded-md">Succeeded</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-3 py-1.5 rounded-md border border-emerald-500/20">Succeeded</span>
                       ) : (
-                        <span className="text-red-600 font-medium bg-red-500/10 px-2.5 py-1 rounded-md">Failed</span>
+                        <span className="text-red-600 dark:text-red-400 font-semibold bg-red-500/10 px-3 py-1.5 rounded-md border border-red-500/20">Failed</span>
                       )}
                     </div>
                   </div>

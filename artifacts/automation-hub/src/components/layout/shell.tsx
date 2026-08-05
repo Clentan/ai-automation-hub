@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'wouter';
-import { LayoutGrid, CheckSquare, Zap, Activity, Home, Search, BookOpen, User, Menu, KeyRound } from 'lucide-react';
+import { LayoutGrid, CheckSquare, Zap, Activity, Home, BookOpen, Menu, KeyRound, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useSettings } from '@/lib/use-settings';
 import { useState } from 'react';
 
 const NAV_ITEMS = [
@@ -16,30 +18,32 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { settings } = useSettings();
+  const initials = settings.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() || 'AA';
 
   return (
     <div className="flex h-full w-[240px] flex-col border-r bg-sidebar">
       <div className="p-4 md:p-6 flex items-center gap-3">
-        <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
+        <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm">
           <Zap className="h-5 w-5" />
         </div>
         <span className="font-semibold text-lg tracking-tight">AI Automation Hub</span>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-2">
+      <nav className="flex-1 space-y-1.5 px-3 py-2">
         {NAV_ITEMS.map((item) => {
           const isActive = location === item.href;
           return (
             <Link key={item.href} href={item.href}>
               <div
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer",
                   isActive 
-                    ? "bg-sidebar-primary/10 text-sidebar-primary" 
+                    ? "bg-primary/10 text-primary shadow-sm" 
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
-                <item.icon className={cn("h-4 w-4", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50")} />
+                <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-sidebar-foreground/50")} />
                 {item.label}
               </div>
             </Link>
@@ -47,11 +51,19 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/70 cursor-pointer hover:bg-sidebar-accent rounded-md">
-          <BookOpen className="h-4 w-4 text-sidebar-foreground/50" />
-          Documentation
-        </div>
+      <div className="p-4 border-t border-sidebar-border/50">
+        <Link href="/settings">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-sidebar-accent transition-colors -mx-3">
+            <Avatar className="h-8 w-8 border border-border">
+              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">{settings.name}</div>
+              <div className="text-xs text-muted-foreground truncate">{settings.email}</div>
+            </div>
+            <SettingsIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+          </div>
+        </Link>
       </div>
     </div>
   );
@@ -60,6 +72,8 @@ export function Sidebar() {
 export function MobileNav() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const { settings } = useSettings();
+  const initials = settings.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() || 'AA';
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -68,14 +82,14 @@ export function MobileNav() {
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[240px] p-0 flex flex-col">
+      <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
         <div className="p-4 md:p-6 flex items-center gap-3 border-b">
-          <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
+          <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm">
             <Zap className="h-5 w-5" />
           </div>
           <span className="font-semibold text-lg tracking-tight">AI Automation Hub</span>
         </div>
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex-1 space-y-1.5 px-3 py-4">
           {NAV_ITEMS.map((item) => {
             const isActive = location === item.href;
             return (
@@ -83,19 +97,37 @@ export function MobileNav() {
                 <div
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer",
                     isActive 
-                      ? "bg-sidebar-primary/10 text-sidebar-primary" 
+                      ? "bg-primary/10 text-primary shadow-sm" 
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                   )}
                 >
-                  <item.icon className={cn("h-4 w-4", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50")} />
+                  <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-sidebar-foreground/50")} />
                   {item.label}
                 </div>
               </Link>
             );
           })}
         </nav>
+        
+        <div className="p-4 border-t border-sidebar-border/50">
+          <Link href="/settings">
+            <div 
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-sidebar-accent transition-colors -mx-3"
+            >
+              <Avatar className="h-9 w-9 border border-border">
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{settings.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{settings.email}</div>
+              </div>
+              <SettingsIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+            </div>
+          </Link>
+        </div>
       </SheetContent>
     </Sheet>
   );

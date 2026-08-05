@@ -39,12 +39,37 @@ export function useFlows() {
     try {
       const storedFlows = localStorage.getItem(FLOWS_STORAGE_KEY);
       if (storedFlows) {
-        setFlows(JSON.parse(storedFlows));
+        const parsed = JSON.parse(storedFlows);
+        if (Array.isArray(parsed)) {
+          setFlows(
+            parsed.filter(
+              (f: unknown): f is Flow =>
+                !!f &&
+                typeof f === 'object' &&
+                typeof (f as Flow).id === 'string' &&
+                typeof (f as Flow).name === 'string' &&
+                !!(f as Flow).template &&
+                typeof (f as Flow).template === 'object'
+            )
+          );
+        }
       }
 
       const storedActivity = localStorage.getItem(ACTIVITY_STORAGE_KEY);
       if (storedActivity) {
-        setActivity(JSON.parse(storedActivity));
+        const parsed = JSON.parse(storedActivity);
+        if (Array.isArray(parsed)) {
+          setActivity(
+            parsed.filter(
+              (a: unknown): a is ActivityLog =>
+                !!a &&
+                typeof a === 'object' &&
+                typeof (a as ActivityLog).id === 'string' &&
+                typeof (a as ActivityLog).flowName === 'string' &&
+                typeof (a as ActivityLog).timestamp === 'string'
+            )
+          );
+        }
       }
     } catch (error) {
       console.error('Failed to load data from localStorage', error);
