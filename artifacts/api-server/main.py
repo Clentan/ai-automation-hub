@@ -1,24 +1,27 @@
 """AI Automation Hub - FastAPI backend.
 
 Serves under the /api path prefix (routed by the workspace proxy).
-Stores per-client template API keys, template requests, and run logs in SQLite.
+Stores per-client template API keys, template requests, and run logs in
+PostgreSQL (DATABASE_URL) so data survives redeploys.
 """
 import os
 import re
 import secrets
-import sqlite3
 import time
 import uuid
 from contextlib import contextmanager
 from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException
+from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, Field
 
-DB_PATH = os.environ.get(
-    "HUB_DB_PATH", os.path.join(os.path.dirname(__file__), "data", "hub.db")
-)
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is required")
+
+pool = ConnectionPool(DATABASE_URL, min_size=1, max_size=10, kwargs={"row_factory": dict_row})
 
 app = FastAPI(title="AI Automation Hub API", docs_url="/api/docs", openapi_url="/api/openapi.json")
 
@@ -32,20 +35,13 @@ KNOWN_TEMPLATE_IDS = {f"t-{i}" for i in range(1, 21)}
 
 @contextmanager
 def db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=10000")
-    try:
+    with pool.connection() as conn:
         yield conn
-        conn.commit()
-    finally:
-        conn.close()
 
 
 def init_db() -> None:
     with db() as conn:
-        conn.executescript(
+        conn.execute(
             """
             CREATE TABLE IF NOT EXISTS api_keys (
                 client_id   TEXT NOT NULL,
@@ -53,7 +49,11 @@ def init_db() -> None:
                 key         TEXT NOT NULL UNIQUE,
                 created_at  TEXT NOT NULL,
                 PRIMARY KEY (client_id, template_id)
-            );
+            )
+            """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS template_requests (
                 id          TEXT PRIMARY KEY,
                 client_id   TEXT,
@@ -61,14 +61,18 @@ def init_db() -> None:
                 tools       TEXT,
                 description TEXT NOT NULL,
                 created_at  TEXT NOT NULL
-            );
+            )
+            """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS runs (
                 id          TEXT PRIMARY KEY,
                 template_id TEXT NOT NULL,
                 client_id   TEXT NOT NULL,
                 status      TEXT NOT NULL,
                 created_at  TEXT NOT NULL
-            );
+            )
             """
         )
 
@@ -115,7 +119,7 @@ class TemplateRequestIn(BaseModel):
     description: str = Field(min_length=1, max_length=3000)
 
 
-def row_to_key(row: sqlite3.Row) -> KeyOut:
+def row_to_key(row: dict) -> KeyOut:
     return KeyOut(templateId=row["template_id"], key=row["key"], createdAt=row["created_at"])
 
 
@@ -129,7 +133,7 @@ def list_keys(x_client_id: Optional[str] = Header(default=None)):
     client_id = require_client(x_client_id)
     with db() as conn:
         rows = conn.execute(
-            "SELECT * FROM api_keys WHERE client_id = ? ORDER BY created_at DESC", (client_id,)
+            "SELECT * FROM api_keys WHERE client_id = %s ORDER BY created_at DESC", (client_id,)
         ).fetchall()
     return [row_to_key(r) for r in rows]
 
@@ -143,12 +147,12 @@ def issue_key(body: IssueKeyIn, x_client_id: Optional[str] = Header(default=None
         key = new_key()
         # Atomic: concurrent requests for the same (client, template) keep the first key.
         conn.execute(
-            "INSERT INTO api_keys (client_id, template_id, key, created_at) VALUES (?, ?, ?, ?) "
-            "ON CONFLICT(client_id, template_id) DO NOTHING",
+            "INSERT INTO api_keys (client_id, template_id, key, created_at) VALUES (%s, %s, %s, %s) "
+            "ON CONFLICT (client_id, template_id) DO NOTHING",
             (client_id, template_id, key, created),
         )
         row = conn.execute(
-            "SELECT * FROM api_keys WHERE client_id = ? AND template_id = ?",
+            "SELECT * FROM api_keys WHERE client_id = %s AND template_id = %s",
             (client_id, template_id),
         ).fetchone()
     return row_to_key(row)
@@ -159,18 +163,15 @@ def regenerate_key(template_id: str, x_client_id: Optional[str] = Header(default
     client_id = require_client(x_client_id)
     template_id = check_template_id(template_id)
     with db() as conn:
+        created = now_iso()
+        key = new_key()
         row = conn.execute(
-            "SELECT * FROM api_keys WHERE client_id = ? AND template_id = ?",
-            (client_id, template_id),
+            "UPDATE api_keys SET key = %s, created_at = %s "
+            "WHERE client_id = %s AND template_id = %s RETURNING *",
+            (key, created, client_id, template_id),
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="No key for this template")
-        created = now_iso()
-        key = new_key()
-        conn.execute(
-            "UPDATE api_keys SET key = ?, created_at = ? WHERE client_id = ? AND template_id = ?",
-            (key, created, client_id, template_id),
-        )
     return KeyOut(templateId=template_id, key=key, createdAt=created)
 
 
@@ -180,7 +181,7 @@ def revoke_key(template_id: str, x_client_id: Optional[str] = Header(default=Non
     template_id = check_template_id(template_id)
     with db() as conn:
         conn.execute(
-            "DELETE FROM api_keys WHERE client_id = ? AND template_id = ?",
+            "DELETE FROM api_keys WHERE client_id = %s AND template_id = %s",
             (client_id, template_id),
         )
     return None
@@ -191,7 +192,8 @@ def create_template_request(body: TemplateRequestIn, x_client_id: Optional[str] 
     request_id = str(uuid.uuid4())
     with db() as conn:
         conn.execute(
-            "INSERT INTO template_requests (id, client_id, title, tools, description, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO template_requests (id, client_id, title, tools, description, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
             (
                 request_id,
                 x_client_id if x_client_id and CLIENT_ID_RE.match(x_client_id) else None,
@@ -215,7 +217,7 @@ def list_template_requests(authorization: Optional[str] = Header(default=None)):
         rows = conn.execute(
             "SELECT id, title, tools, description, created_at FROM template_requests ORDER BY created_at DESC"
         ).fetchall()
-    return [dict(r) for r in rows]
+    return rows
 
 
 class RunIn(BaseModel):
@@ -233,7 +235,7 @@ def run_template(
         raise HTTPException(status_code=401, detail="Missing Bearer API key")
     key = authorization.split(" ", 1)[1].strip()
     with db() as conn:
-        row = conn.execute("SELECT * FROM api_keys WHERE key = ?", (key,)).fetchone()
+        row = conn.execute("SELECT * FROM api_keys WHERE key = %s", (key,)).fetchone()
         if not row:
             raise HTTPException(status_code=401, detail="Invalid API key")
         if row["template_id"] != template_id:
@@ -243,7 +245,7 @@ def run_template(
             )
         run_id = str(uuid.uuid4())
         conn.execute(
-            "INSERT INTO runs (id, template_id, client_id, status, created_at) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO runs (id, template_id, client_id, status, created_at) VALUES (%s, %s, %s, %s, %s)",
             (run_id, template_id, row["client_id"], "queued", now_iso()),
         )
     return {"ok": True, "runId": run_id, "templateId": template_id, "status": "queued"}
@@ -257,7 +259,7 @@ def list_runs(template_id: str, x_client_id: Optional[str] = Header(default=None
     with db() as conn:
         rows = conn.execute(
             "SELECT id, template_id, status, created_at FROM runs "
-            "WHERE template_id = ? AND client_id = ? ORDER BY created_at DESC LIMIT 50",
+            "WHERE template_id = %s AND client_id = %s ORDER BY created_at DESC LIMIT 50",
             (template_id, client_id),
         ).fetchall()
-    return [dict(r) for r in rows]
+    return rows
