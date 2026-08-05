@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useSearch, Link } from 'wouter';
-import { KeyRound, Copy, RefreshCw, Check, Sparkles, Lock, Zap, Trash2, LayoutGrid } from 'lucide-react';
+import { KeyRound, Copy, RefreshCw, Check, Sparkles, Lock, Zap, Trash2, LayoutGrid, LogIn, ShieldCheck } from 'lucide-react';
+import { useUser } from '@clerk/react';
 import { MOCK_TEMPLATES } from '@/lib/data';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { Button } from '@/components/ui/button';
@@ -34,14 +35,45 @@ const PLANS = [
   },
 ];
 
-function maskKey(key: string) {
-  return `${key.slice(0, 12)}${'•'.repeat(12)}${key.slice(-4)}`;
+function maskedKey(prefix: string) {
+  return `${prefix}${'•'.repeat(16)}`;
+}
+
+function SignInPrompt() {
+  return (
+    <div className="flex-1 flex items-center justify-center bg-secondary/10 p-6">
+      <Card className="shadow-sm border-border/60 rounded-2xl max-w-md w-full">
+        <CardContent className="flex flex-col items-center text-center gap-4 py-12 px-8">
+          <div className="bg-primary/10 text-primary p-4 rounded-2xl">
+            <Lock className="h-8 w-8" />
+          </div>
+          <div>
+            <p className="font-bold text-xl text-foreground mb-2">Sign in to manage API keys</p>
+            <p className="text-sm text-muted-foreground">
+              Your keys are tied to your account, so they work on any device — sign in to request,
+              regenerate, or revoke them.
+            </p>
+          </div>
+          <Button asChild className="rounded-full px-8 gap-2 shadow-md mt-2">
+            <Link href="/sign-in"><LogIn className="h-4 w-4" /> Sign in</Link>
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            New here? <Link href="/sign-up" className="text-primary font-semibold">Create an account</Link>
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 export default function ApiAccess() {
   const { toast } = useToast();
-  const { keys, loading, getKeyFor, requestKeyFor, regenerateKeyFor, revokeKeyFor } = useApiKeys();
+  const { user, isLoaded } = useUser();
+  const { keys, loading, unauthorized, getKeyFor, requestKeyFor, regenerateKeyFor, revokeKeyFor } = useApiKeys();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Plaintext keys revealed in this session (issue/regenerate). Shown once —
+  // the server only stores a hash and can never display them again.
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
 
   const search = useSearch();
   const requestedTemplate = useMemo(() => {
@@ -53,22 +85,28 @@ export default function ApiAccess() {
 
   const handleRequest = async (templateId: string, templateName: string) => {
     try {
-      await requestKeyFor(templateId);
+      const issued = await requestKeyFor(templateId);
+      setRevealed((r) => ({ ...r, [templateId]: issued.key }));
       toast({
         title: 'API key issued',
-        description: `Your key for "${templateName}" is ready. It only works with this automation.`,
+        description: `Copy your key for "${templateName}" now — it is shown only once.`,
       });
-    } catch {
-      toast({ title: 'Could not issue key', description: 'Please try again.', variant: 'destructive' });
+    } catch (e) {
+      toast({
+        title: 'Could not issue key',
+        description: e instanceof Error && e.message !== 'Failed to issue API key' ? e.message : 'Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleRegenerate = async (templateId: string, templateName: string) => {
     try {
-      await regenerateKeyFor(templateId);
+      const issued = await regenerateKeyFor(templateId);
+      setRevealed((r) => ({ ...r, [templateId]: issued.key }));
       toast({
         title: 'API key regenerated',
-        description: `The old key for "${templateName}" no longer works.`,
+        description: `The old key for "${templateName}" no longer works. Copy the new key now — it is shown only once.`,
       });
     } catch {
       toast({ title: 'Could not regenerate key', description: 'Please try again.', variant: 'destructive' });
@@ -78,6 +116,10 @@ export default function ApiAccess() {
   const handleRevoke = async (templateId: string, templateName: string) => {
     try {
       await revokeKeyFor(templateId);
+      setRevealed((r) => {
+        const { [templateId]: _removed, ...rest } = r;
+        return rest;
+      });
       toast({
         title: 'API key revoked',
         description: `Access to "${templateName}" has been removed.`,
@@ -94,8 +136,10 @@ export default function ApiAccess() {
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const exampleKey = requestedKey?.key ?? keys[0]?.key ?? 'YOUR_TEMPLATE_KEY';
+  const exampleKey = (requestedTemplate && revealed[requestedTemplate.id]) || 'YOUR_TEMPLATE_KEY';
   const exampleTemplateId = requestedTemplate?.id ?? keys[0]?.templateId ?? '{template_id}';
+
+  const signedOut = isLoaded && !user;
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
@@ -110,12 +154,15 @@ export default function ApiAccess() {
               <Badge className="gap-1 bg-primary text-primary-foreground uppercase tracking-wider text-[10px] font-bold"><Sparkles className="h-3 w-3" /> Free plan</Badge>
             </div>
             <p className="text-muted-foreground text-lg">
-              Each automation has its own API key. Request a key per template — it only unlocks that automation.
+              Each automation has its own API key, tied to your account so it works on any device.
             </p>
           </div>
         </div>
       </div>
 
+      {signedOut || unauthorized ? (
+        <SignInPrompt />
+      ) : (
       <div className="flex-1 overflow-auto bg-secondary/10">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -163,7 +210,8 @@ export default function ApiAccess() {
                 <KeyRound className="h-5 w-5 text-primary" /> Your template keys
               </CardTitle>
               <CardDescription className="text-[15px]">
-                One key per automation. Revoking a key disconnects only that automation — everything else keeps running.
+                One key per automation, stored securely — we only keep a fingerprint, so each key is
+                shown in full just once, right after it is issued.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -192,6 +240,7 @@ export default function ApiAccess() {
                   {keys.map((entry) => {
                     const template = MOCK_TEMPLATES.find((t) => t.id === entry.templateId);
                     if (!template) return null;
+                    const plaintext = revealed[entry.templateId];
                     return (
                       <div key={entry.templateId} className="p-5 flex flex-col gap-3">
                         <div className="flex items-center gap-3">
@@ -209,15 +258,24 @@ export default function ApiAccess() {
                             </p>
                           </div>
                         </div>
+                        {plaintext && (
+                          <div className="flex items-start gap-2 rounded-lg border border-emerald-300/60 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-900/60 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+                            <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+                            Copy this key now — for your security it is shown only once and cannot be
+                            recovered later (you can always regenerate).
+                          </div>
+                        )}
                         <div className="flex flex-col sm:flex-row gap-2">
                           <code className="flex-1 bg-secondary/30 rounded-lg px-4 py-2.5 text-sm font-mono truncate border border-border/50 text-foreground">
-                            {maskKey(entry.key)}
+                            {plaintext ?? maskedKey(entry.keyPrefix)}
                           </code>
                           <div className="flex gap-2 shrink-0">
-                            <Button variant="outline" size="sm" onClick={() => copyKey(entry.templateId, entry.key)} className="gap-1.5 rounded-lg h-auto">
-                              {copiedId === entry.templateId ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                              {copiedId === entry.templateId ? 'Copied' : 'Copy'}
-                            </Button>
+                            {plaintext && (
+                              <Button variant="outline" size="sm" onClick={() => copyKey(entry.templateId, plaintext)} className="gap-1.5 rounded-lg h-auto">
+                                {copiedId === entry.templateId ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                {copiedId === entry.templateId ? 'Copied' : 'Copy'}
+                              </Button>
+                            )}
                             <Button variant="outline" size="sm" onClick={() => handleRegenerate(entry.templateId, template.name)} className="gap-1.5 rounded-lg h-auto">
                               <RefreshCw className="h-3.5 w-3.5" /> Regenerate
                             </Button>
@@ -290,6 +348,7 @@ export default function ApiAccess() {
           </div>
         </motion.div>
       </div>
+      )}
     </div>
   );
 }

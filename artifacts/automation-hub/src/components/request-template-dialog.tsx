@@ -43,8 +43,16 @@ export function RequestTemplateDialog({ trigger }: { trigger?: React.ReactNode }
         title: 'Request submitted',
         description: 'Thanks! We review every request — popular ideas become new templates in the gallery.',
       });
-    } catch {
-      toast({ title: 'Could not submit request', description: 'Please try again.', variant: 'destructive' });
+    } catch (e) {
+      if (e instanceof Error && e.message === 'sign-in-required') {
+        toast({
+          title: 'Sign in to submit',
+          description: 'Please sign in so we can follow up on your template idea.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Could not submit request', description: 'Please try again.', variant: 'destructive' });
+      }
     } finally {
       setSubmitting(false);
     }
