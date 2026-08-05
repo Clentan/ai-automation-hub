@@ -1,11 +1,9 @@
 import { motion } from 'framer-motion';
-import { Link } from 'wouter';
 import {
   BookOpen,
   Rocket,
   KeyRound,
   Zap,
-  ArrowRight,
   PlayCircle,
   HelpCircle,
   Home,
@@ -16,6 +14,7 @@ import {
   Send,
   Server,
   BellRing,
+  Settings,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,30 +29,30 @@ const GUIDES = [
   {
     icon: Rocket,
     title: 'Getting started',
-    description: 'What AI Automation Hub is and how to run your first automation in minutes.',
     tag: 'Beginner',
-    href: '/templates',
+    content:
+      'AI Automation Hub is a gallery of ready-made automations built with n8n and run on our infrastructure. Open the Templates page, browse or search the gallery, and press "Use template" on any automation to activate it as one of your flows. Nothing to install, nothing to build — your first automation can be running in under a minute.',
   },
   {
     icon: KeyRound,
-    title: 'Connecting with your API key',
-    description: 'Request a dedicated API key per template and trigger automations from your own tools.',
+    title: 'Connecting with API keys',
     tag: 'Essential',
-    href: '/api-access',
+    content:
+      'Every template has its own dedicated API key. Press "Request API key" on a template and a key is issued that works only with that automation. Use it in the Authorization header of an HTTP request to trigger the template from your own apps and scripts. You can copy, regenerate, or revoke each key at any time — revoking one never affects your other connections.',
   },
   {
     icon: Zap,
     title: 'Understanding templates',
-    description: 'Automated, Scheduled, and Instant templates — which type fits your workflow.',
     tag: 'Beginner',
-    href: '/templates',
+    content:
+      'Templates come in three types. Automated templates react to events on their own (e.g. a new email arrives). Scheduled templates run at fixed times (e.g. a daily briefing). Instant templates run the moment you trigger them — by hand or via their API key. Every template card shows its type, the services it connects, and a step-by-step breakdown of what it does.',
   },
   {
     icon: PlayCircle,
     title: 'Managing your flows',
-    description: 'Turn flows on and off, rename them, and track every run in Activity.',
     tag: 'Guide',
-    href: '/my-flows',
+    content:
+      'When you activate a template it becomes a flow in "My flows". There you can switch flows on or off, rename them, or delete them when you no longer need them. Every action is recorded with a timestamp in Activity, so you always have a complete history of what happened and when.',
   },
 ];
 
@@ -61,37 +60,38 @@ const APP_SECTIONS = [
   {
     icon: Home,
     title: 'Home',
-    href: '/',
     description:
       'Your dashboard. See active flows, total runs, the most popular templates, and your latest activity at a glance.',
   },
   {
     icon: LayoutGrid,
     title: 'Templates',
-    href: '/templates',
     description:
-      'The full gallery of ready-made automations built with n8n. Search, filter by category, and open any template to see exactly what it does step by step.',
+      'The full gallery of ready-made automations built with n8n. Search, filter by category, and open any template to see exactly what it does step by step. Each template has a "Request API key" button, and you can submit your own ideas with "Request a template".',
   },
   {
     icon: CheckSquare,
     title: 'My flows',
-    href: '/my-flows',
     description:
       'Every template you have activated becomes a flow here. Turn flows on or off, rename them, or remove them when you no longer need them.',
   },
   {
     icon: Activity,
     title: 'Activity',
-    href: '/activity',
     description:
       'A complete history of what happened: flows created, switched on or off, renamed, or deleted — with timestamps.',
   },
   {
     icon: KeyRound,
     title: 'API Access',
-    href: '/api-access',
     description:
-      'Manage your template API keys — each automation has its own dedicated key. Copy, regenerate, or revoke keys, and check your plan (everyone is on the Free plan during early access).',
+      'Reached via the "Request API key" button on any template. Manage your template API keys — each automation has its own dedicated key. Copy, regenerate, or revoke keys, see the connection example, and check your plan (everyone is on the Free plan during early access).',
+  },
+  {
+    icon: Settings,
+    title: 'Settings',
+    description:
+      'Open it with the gear icon next to your profile at the bottom of the sidebar. Update your name and email, switch between light and dark theme, manage notifications, and clear your local data.',
   },
 ];
 
@@ -131,7 +131,7 @@ const PIPELINE_STEPS = [
 const FAQS = [
   {
     q: 'What is AI Automation Hub?',
-    a: 'A hub of ready-made automations built with n8n. You pick a template, connect it with your API key, and it runs on our infrastructure — no setup on your side.',
+    a: 'A hub of ready-made automations built with n8n. You pick a template, connect it with its API key, and it runs on our infrastructure — no setup on your side.',
   },
   {
     q: 'Do I need to know n8n to use it?',
@@ -188,27 +188,47 @@ export default function Learn() {
             <h2 className="text-2xl font-bold tracking-tight text-foreground">Quick Guides</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {GUIDES.map((guide) => (
-                <Link key={guide.title} href={guide.href}>
-                  <Card className="h-full cursor-pointer transition-all hover:shadow-md hover:border-primary/40 group bg-card border-border/60">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="bg-primary/10 text-primary p-2.5 rounded-xl transition-colors group-hover:bg-primary/20">
-                          <guide.icon className="h-5 w-5" />
-                        </div>
-                        <Badge variant="secondary" className="bg-secondary/60 text-[10px] uppercase tracking-wider font-bold">{guide.tag}</Badge>
+                <Card key={guide.title} className="h-full bg-card border-border/60">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="bg-primary/10 text-primary p-2.5 rounded-xl">
+                        <guide.icon className="h-5 w-5" />
                       </div>
-                      <div>
-                        <p className="font-bold text-lg mb-1.5 flex items-center gap-2 text-foreground group-hover:text-primary transition-colors">
-                          {guide.title}
-                          <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                        </p>
-                        <p className="text-sm text-muted-foreground leading-relaxed font-medium">{guide.description}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      <Badge variant="secondary" className="bg-secondary/60 text-[10px] uppercase tracking-wider font-bold">{guide.tag}</Badge>
+                    </div>
+                    <div>
+                      <p className="font-bold text-lg mb-1.5 text-foreground">{guide.title}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed font-medium">{guide.content}</p>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
+          </motion.div>
+
+          {/* Connecting via API */}
+          <motion.div variants={item} className="space-y-5">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+                <KeyRound className="h-6 w-6 text-primary" /> Connecting via API
+              </h2>
+              <p className="text-muted-foreground text-base mt-1 font-medium max-w-2xl">
+                Each template's key goes in the Authorization header, and the template id goes in the URL. A connection looks like this:
+              </p>
+            </div>
+            <Card className="bg-card border-border/60 shadow-sm">
+              <CardContent className="p-6">
+                <pre className="bg-[#0d1117] dark:bg-black text-blue-300 rounded-xl p-5 text-[13px] md:text-sm font-mono overflow-x-auto border border-[#30363d] shadow-inner">
+  <span className="text-purple-400">curl</span> -X POST https://api.aiautomationhub.dev/v1/templates/<span className="text-orange-300">&#123;template_id&#125;</span>/run \
+    -H <span className="text-green-300">"Authorization: Bearer &#123;template_api_key&#125;"</span> \
+    -H <span className="text-green-300">"Content-Type: application/json"</span> \
+    -d <span className="text-green-300">'&#123; "inputs": &#123; &#125; &#125;'</span>
+                </pre>
+                <p className="text-sm text-muted-foreground mt-4 font-medium">
+                  Because each key is bound to one template, a key can never trigger any automation other than its own. Endpoints are illustrative — live API access is rolling out with early access.
+                </p>
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* The application */}
@@ -221,22 +241,17 @@ export default function Learn() {
             </div>
             <div className="grid grid-cols-1 gap-4">
               {APP_SECTIONS.map((section) => (
-                <Link key={section.title} href={section.href}>
-                  <Card className="cursor-pointer transition-all hover:shadow-md hover:border-primary/40 group bg-card border-border/60">
-                    <CardContent className="p-5 flex items-start gap-5">
-                      <div className="bg-primary/10 text-primary p-3 rounded-xl shrink-0 transition-colors group-hover:bg-primary/20">
-                        <section.icon className="h-6 w-6" />
-                      </div>
-                      <div className="pt-0.5">
-                        <p className="font-bold text-base flex items-center gap-2 text-foreground group-hover:text-primary transition-colors mb-1">
-                          {section.title}
-                          <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                        </p>
-                        <p className="text-sm text-muted-foreground leading-relaxed font-medium">{section.description}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <Card key={section.title} className="bg-card border-border/60">
+                  <CardContent className="p-5 flex items-start gap-5">
+                    <div className="bg-primary/10 text-primary p-3 rounded-xl shrink-0">
+                      <section.icon className="h-6 w-6" />
+                    </div>
+                    <div className="pt-0.5">
+                      <p className="font-bold text-base text-foreground mb-1">{section.title}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed font-medium">{section.description}</p>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </motion.div>
