@@ -75,9 +75,15 @@ def init_db() -> None:
             )
             """
         )
+        # Migration: add status column to template_requests if missing.
+        conn.execute(
+            "ALTER TABLE template_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new'"
+        )
 
 
 init_db()
+
+REQUEST_STATUSES = {"new", "reviewed", "planned", "done"}
 
 CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 TEMPLATE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -205,19 +211,88 @@ def create_template_request(body: TemplateRequestIn, x_client_id: Optional[str] 
         )
     return {"id": request_id}
 
-
-@app.get("/api/template-requests")
-def list_template_requests(authorization: Optional[str] = Header(default=None)):
+def require_admin(authorization: Optional[str]) -> None:
     """Owner-only: requires ADMIN_TOKEN env var as a Bearer token."""
     admin_token = os.environ.get("ADMIN_TOKEN")
     provided = (authorization or "").removeprefix("Bearer ").strip()
     if not admin_token or not secrets.compare_digest(provided, admin_token):
         raise HTTPException(status_code=404, detail="Not found")
+@app.get("/api/template-requests")
+def list_template_requests(authorization: Optional[str] = Header(default=None)):
+    require_admin(authorization)
     with db() as conn:
         rows = conn.execute(
-            "SELECT id, title, tools, description, created_at FROM template_requests ORDER BY created_at DESC"
+            "SELECT id, title, tools, description, status, created_at FROM template_requests "
+            "ORDER BY created_at DESC"
         ).fetchall()
     return rows
+
+class RequestStatusIn(BaseModel):
+    status: str = Field(min_length=1, max_length=20)
+@app.get("/api/admin/stats")
+def admin_stats(authorization: Optional[str] = Header(default=None)):
+    require_admin(authorization)
+    with db() as conn:
+        clients = conn.execute("SELECT COUNT(DISTINCT client_id) AS c FROM api_keys").fetchone()["c"]
+        keys_issued = conn.execute("SELECT COUNT(*) AS c FROM api_keys").fetchone()["c"]
+        templates_with_keys = conn.execute(
+            "SELECT COUNT(DISTINCT template_id) AS c FROM api_keys"
+        ).fetchone()["c"]
+        requests_total = conn.execute("SELECT COUNT(*) AS c FROM template_requests").fetchone()["c"]
+        requests_by_status = {
+            r["status"]: r["c"]
+            for r in conn.execute(
+                "SELECT status, COUNT(*) AS c FROM template_requests GROUP BY status"
+            ).fetchall()
+        }
+        runs_total = conn.execute("SELECT COUNT(*) AS c FROM runs").fetchone()["c"]
+        runs_by_status = {
+            r["status"]: r["c"]
+            for r in conn.execute("SELECT status, COUNT(*) AS c FROM runs GROUP BY status").fetchall()
+        }
+        runs_by_template = {
+            r["template_id"]: r["c"]
+            for r in conn.execute(
+                "SELECT template_id, COUNT(*) AS c FROM runs GROUP BY template_id ORDER BY c DESC LIMIT 10"
+            ).fetchall()
+        }
+        recent_runs = [
+            dict(r)
+            for r in conn.execute(
+                "SELECT id, template_id, client_id, status, created_at FROM runs "
+                "ORDER BY created_at DESC LIMIT 10"
+            ).fetchall()
+        ]
+    return {
+        "clients": clients,
+        "keysIssued": keys_issued,
+        "templatesWithKeys": templates_with_keys,
+        "requestsTotal": requests_total,
+        "requestsByStatus": requests_by_status,
+        "runsTotal": runs_total,
+        "runsByStatus": runs_by_status,
+        "runsByTemplate": runs_by_template,
+        "recentRuns": recent_runs,
+    }
+
+
+@app.get("/api/admin/keys")
+def admin_keys(authorization: Optional[str] = Header(default=None)):
+    require_admin(authorization)
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT client_id, template_id, key, created_at FROM api_keys ORDER BY created_at DESC"
+        ).fetchall()
+    # Never expose full key material in the admin UI; show a suffix for identification.
+    return [
+        {
+            "clientId": r["client_id"],
+            "templateId": r["template_id"],
+            "keySuffix": r["key"][-6:],
+            "createdAt": r["created_at"],
+        }
+        for r in rows
+    ]
 
 
 class RunIn(BaseModel):
@@ -263,3 +338,20 @@ def list_runs(template_id: str, x_client_id: Optional[str] = Header(default=None
             (template_id, client_id),
         ).fetchall()
     return rows
+
+@app.patch("/api/template-requests/{request_id}")
+def update_template_request(
+    request_id: str,
+    body: RequestStatusIn,
+    authorization: Optional[str] = Header(default=None),
+):
+    require_admin(authorization)
+    if body.status not in REQUEST_STATUSES:
+        raise HTTPException(status_code=422, detail="Invalid status")
+    with db() as conn:
+        cur = conn.execute(
+            "UPDATE template_requests SET status = %s WHERE id = %s", (body.status, request_id)
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Request not found")
+    return {"id": request_id, "status": body.status}

@@ -13,6 +13,7 @@ import ActivityLog from '@/pages/activity';
 import ApiAccess from '@/pages/api-access';
 import Learn from '@/pages/learn';
 import Settings from '@/pages/settings';
+import Admin from '@/pages/admin';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -28,6 +29,8 @@ function Router() {
         <Route path="/api-access" component={ApiAccess} />
         <Route path="/learn" component={Learn} />
         <Route path="/settings" component={Settings} />
+        <Route path="/admin">{() => <Admin />}</Route>
+        <Route path="/admin/requests">{() => <Admin initialTab="requests" />}</Route>
         <Route component={NotFound} />
       </Switch>
     </Shell>
