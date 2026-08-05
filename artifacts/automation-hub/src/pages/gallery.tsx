@@ -286,7 +286,7 @@ export default function Gallery() {
               </div>
             </div>
             
-            <div className="p-8 md:p-10 bg-card max-h-[50vh] overflow-y-auto">
+            <div className="p-8 md:p-10 bg-card max-h-[60vh] overflow-y-auto overscroll-contain">
               <div className="flex flex-wrap items-center gap-6 mb-10 text-sm border-b pb-6">
                 <div>
                   <span className="text-muted-foreground block mb-1 text-xs uppercase tracking-wider font-medium">Type</span>
