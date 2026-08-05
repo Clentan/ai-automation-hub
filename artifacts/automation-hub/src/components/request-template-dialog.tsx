@@ -14,26 +14,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-
-const REQUESTS_STORAGE = 'ai-automation-hub-template-requests';
-
-interface TemplateRequest {
-  title: string;
-  tools: string;
-  description: string;
-  createdAt: string;
-}
-
-function saveRequest(request: TemplateRequest) {
-  try {
-    const stored = localStorage.getItem(REQUESTS_STORAGE);
-    const parsed = stored ? JSON.parse(stored) : [];
-    const list: TemplateRequest[] = Array.isArray(parsed) ? parsed : [];
-    localStorage.setItem(REQUESTS_STORAGE, JSON.stringify([request, ...list]));
-  } catch (e) {
-    console.error('Failed to save template request', e);
-  }
-}
+import { submitTemplateRequest } from '@/lib/use-api-keys';
 
 export function RequestTemplateDialog({ trigger }: { trigger?: React.ReactNode }) {
   const { toast } = useToast();
@@ -42,24 +23,31 @@ export function RequestTemplateDialog({ trigger }: { trigger?: React.ReactNode }
   const [tools, setTools] = useState('');
   const [description, setDescription] = useState('');
 
-  const canSubmit = title.trim().length > 0 && description.trim().length > 0;
+  const [submitting, setSubmitting] = useState(false);
+  const canSubmit = title.trim().length > 0 && description.trim().length > 0 && !submitting;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
-    saveRequest({
-      title: title.trim(),
-      tools: tools.trim(),
-      description: description.trim(),
-      createdAt: new Date().toISOString(),
-    });
-    setOpen(false);
-    setTitle('');
-    setTools('');
-    setDescription('');
-    toast({
-      title: 'Request submitted',
-      description: 'Thanks! We review every request — popular ideas become new templates in the gallery.',
-    });
+    setSubmitting(true);
+    try {
+      await submitTemplateRequest({
+        title: title.trim(),
+        tools: tools.trim(),
+        description: description.trim(),
+      });
+      setOpen(false);
+      setTitle('');
+      setTools('');
+      setDescription('');
+      toast({
+        title: 'Request submitted',
+        description: 'Thanks! We review every request — popular ideas become new templates in the gallery.',
+      });
+    } catch {
+      toast({ title: 'Could not submit request', description: 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

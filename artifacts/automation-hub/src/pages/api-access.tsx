@@ -40,7 +40,7 @@ function maskKey(key: string) {
 
 export default function ApiAccess() {
   const { toast } = useToast();
-  const { keys, getKeyFor, requestKeyFor, regenerateKeyFor, revokeKeyFor } = useApiKeys();
+  const { keys, loading, getKeyFor, requestKeyFor, regenerateKeyFor, revokeKeyFor } = useApiKeys();
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const search = useSearch();
@@ -51,29 +51,41 @@ export default function ApiAccess() {
 
   const requestedKey = requestedTemplate ? getKeyFor(requestedTemplate.id) : null;
 
-  const handleRequest = (templateId: string, templateName: string) => {
-    requestKeyFor(templateId);
-    toast({
-      title: 'API key issued',
-      description: `Your key for "${templateName}" is ready. It only works with this automation.`,
-    });
+  const handleRequest = async (templateId: string, templateName: string) => {
+    try {
+      await requestKeyFor(templateId);
+      toast({
+        title: 'API key issued',
+        description: `Your key for "${templateName}" is ready. It only works with this automation.`,
+      });
+    } catch {
+      toast({ title: 'Could not issue key', description: 'Please try again.', variant: 'destructive' });
+    }
   };
 
-  const handleRegenerate = (templateId: string, templateName: string) => {
-    regenerateKeyFor(templateId);
-    toast({
-      title: 'API key regenerated',
-      description: `The old key for "${templateName}" no longer works.`,
-    });
+  const handleRegenerate = async (templateId: string, templateName: string) => {
+    try {
+      await regenerateKeyFor(templateId);
+      toast({
+        title: 'API key regenerated',
+        description: `The old key for "${templateName}" no longer works.`,
+      });
+    } catch {
+      toast({ title: 'Could not regenerate key', description: 'Please try again.', variant: 'destructive' });
+    }
   };
 
-  const handleRevoke = (templateId: string, templateName: string) => {
-    revokeKeyFor(templateId);
-    toast({
-      title: 'API key revoked',
-      description: `Access to "${templateName}" has been removed.`,
-      variant: 'destructive',
-    });
+  const handleRevoke = async (templateId: string, templateName: string) => {
+    try {
+      await revokeKeyFor(templateId);
+      toast({
+        title: 'API key revoked',
+        description: `Access to "${templateName}" has been removed.`,
+        variant: 'destructive',
+      });
+    } catch {
+      toast({ title: 'Could not revoke key', description: 'Please try again.', variant: 'destructive' });
+    }
   };
 
   const copyKey = async (templateId: string, key: string) => {
@@ -155,7 +167,12 @@ export default function ApiAccess() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              {keys.length === 0 ? (
+              {loading ? (
+                <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span className="text-sm font-medium">Loading your keys…</span>
+                </div>
+              ) : keys.length === 0 ? (
                 <div className="flex flex-col items-center text-center gap-4 py-12 px-6">
                   <div className="h-16 w-16 rounded-2xl bg-secondary/50 border flex items-center justify-center">
                     <KeyRound className="h-7 w-7 text-muted-foreground" />
@@ -229,14 +246,14 @@ export default function ApiAccess() {
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-primary/0 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
                 <pre className="relative bg-[#0d1117] dark:bg-black text-blue-300 rounded-xl p-5 text-[13px] md:text-sm font-mono overflow-x-auto border border-[#30363d] shadow-inner">
-  <span className="text-purple-400">curl</span> -X POST https://api.aiautomationhub.dev/v1/templates/<span className="text-orange-300">{exampleTemplateId}</span>/run \
+  <span className="text-purple-400">curl</span> -X POST {typeof window !== 'undefined' ? window.location.origin : ''}{import.meta.env.BASE_URL}api/v1/templates/<span className="text-orange-300">{exampleTemplateId}</span>/run \
     -H <span className="text-green-300">"Authorization: Bearer {exampleKey}"</span> \
     -H <span className="text-green-300">"Content-Type: application/json"</span> \
     -d <span className="text-green-300">'&#123; "inputs": &#123; &#125; &#125;'</span>
                 </pre>
               </div>
               <p className="text-sm text-muted-foreground mt-4 font-medium">
-                Endpoints are illustrative — live API access is rolling out with early access.
+                This endpoint is live: it validates your key, checks that it matches the template, and queues a run.
               </p>
             </CardContent>
           </Card>

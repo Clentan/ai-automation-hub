@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSettings } from '@/lib/use-settings';
+import { revokeAllKeys } from '@/lib/use-api-keys';
 import { useTheme } from 'next-themes';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -47,12 +48,20 @@ export default function Settings() {
     });
   };
 
-  const handleClearData = () => {
+  const handleClearData = async () => {
+    // Revoke server-issued API keys before dropping this browser's identity,
+    // otherwise the keys stay active but become unmanageable.
+    try {
+      await revokeAllKeys();
+    } catch {
+      // Best effort — still clear local data.
+    }
     localStorage.removeItem('ai-automation-hub-flows');
     localStorage.removeItem('ai-automation-hub-activity');
     localStorage.removeItem('ai-automation-hub-api-key');
     localStorage.removeItem('ai-automation-hub-template-keys');
     localStorage.removeItem('ai-automation-hub-template-requests');
+    localStorage.removeItem('ai-automation-hub-client-id');
     toast({
       title: "Data cleared",
       description: "All local flows, activity, and API keys have been deleted.",
