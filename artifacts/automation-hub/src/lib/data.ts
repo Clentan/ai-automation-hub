@@ -19,6 +19,9 @@ export interface Template {
   createdAt: string;
 }
 
+// When true, every template shows as "Coming soon" and can't be used yet.
+export const TEMPLATES_COMING_SOON = true;
+
 export const CATEGORIES = [
   'All',
   'Top picks',
