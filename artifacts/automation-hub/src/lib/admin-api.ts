@@ -17,14 +17,17 @@ export class AdminAuthError extends Error {}
 
 export async function adminFetch<T>(
   path: string,
-  token: string,
+  token: string | null,
   init?: Omit<RequestInit, 'headers'> & { headers?: Record<string, string> },
 ): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
+    credentials: 'same-origin',
     headers: {
       ...(init?.headers ?? {}),
-      Authorization: `Bearer ${token}`,
+      // With no token, the signed-in session cookie is used; the backend
+      // grants access when the account email is listed in ADMIN_EMAILS.
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
   // Admin endpoints return 404 for bad/missing tokens; treat GET 404s as auth failures.

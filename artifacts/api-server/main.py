@@ -327,15 +327,68 @@ def create_template_request(body: TemplateRequestIn, user_id: str = Depends(requ
         )
     return {"id": request_id}
 
-def require_admin(authorization: Optional[str]) -> None:
-    """Owner-only: requires ADMIN_TOKEN env var as a Bearer token."""
+_user_email_cache: dict[str, tuple[str, float]] = {}
+USER_EMAIL_TTL = 300.0
+
+
+def _get_user_email(user_id: str) -> Optional[str]:
+    """Fetch (and cache) a Clerk user's primary email address."""
+    cached = _user_email_cache.get(user_id)
+    if cached and time.monotonic() - cached[1] < USER_EMAIL_TTL:
+        return cached[0]
+    if not CLERK_SECRET_KEY:
+        return None
+    try:
+        resp = httpx.get(
+            f"{CLERK_API}/v1/users/{user_id}",
+            headers={"Authorization": f"Bearer {CLERK_SECRET_KEY}"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        return None
+    email = None
+    primary_id = data.get("primary_email_address_id")
+    for addr in data.get("email_addresses", []):
+        if addr.get("id") == primary_id or email is None:
+            email = addr.get("email_address")
+        if addr.get("id") == primary_id:
+            break
+    if email:
+        _user_email_cache[user_id] = (email.lower(), time.monotonic())
+        return email.lower()
+    return None
+
+
+def _admin_emails() -> set[str]:
+    raw = os.environ.get("ADMIN_EMAILS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
+def require_admin(request: Request) -> None:
+    """Owner-only access.
+
+    Grants access when either:
+    - the signed-in Clerk user's email is listed in ADMIN_EMAILS, or
+    - a valid ADMIN_TOKEN is supplied as a Bearer token (legacy/API access).
+    """
+    authorization = request.headers.get("authorization")
     admin_token = os.environ.get("ADMIN_TOKEN")
     provided = (authorization or "").removeprefix("Bearer ").strip()
-    if not admin_token or not secrets.compare_digest(provided, admin_token):
+    if admin_token and provided and secrets.compare_digest(provided, admin_token):
+        return
+    # Fall back to the signed-in user's email.
+    try:
+        user_id = require_user(request)
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="Not found")
+    email = _get_user_email(user_id)
+    if not email or email not in _admin_emails():
         raise HTTPException(status_code=404, detail="Not found")
 @app.get("/api/template-requests")
-def list_template_requests(authorization: Optional[str] = Header(default=None)):
-    require_admin(authorization)
+def list_template_requests(request: Request):
+    require_admin(request)
     with db() as conn:
         rows = conn.execute(
             "SELECT id, title, tools, description, status, created_at FROM template_requests "
@@ -346,8 +399,8 @@ def list_template_requests(authorization: Optional[str] = Header(default=None)):
 class RequestStatusIn(BaseModel):
     status: str = Field(min_length=1, max_length=20)
 @app.get("/api/admin/stats")
-def admin_stats(authorization: Optional[str] = Header(default=None)):
-    require_admin(authorization)
+def admin_stats(request: Request):
+    require_admin(request)
     with db() as conn:
         clients = conn.execute("SELECT COUNT(DISTINCT user_id) AS c FROM user_api_keys").fetchone()["c"]
         keys_issued = conn.execute("SELECT COUNT(*) AS c FROM user_api_keys").fetchone()["c"]
@@ -393,8 +446,8 @@ def admin_stats(authorization: Optional[str] = Header(default=None)):
 
 
 @app.get("/api/admin/keys")
-def admin_keys(authorization: Optional[str] = Header(default=None)):
-    require_admin(authorization)
+def admin_keys(request: Request):
+    require_admin(request)
     with db() as conn:
         rows = conn.execute(
             "SELECT user_id, template_id, key_prefix, created_at FROM user_api_keys ORDER BY created_at DESC"
@@ -465,9 +518,9 @@ def _proxy_host(request: Request) -> str:
 def update_template_request(
     request_id: str,
     body: RequestStatusIn,
-    authorization: Optional[str] = Header(default=None),
+    request: Request,
 ):
-    require_admin(authorization)
+    require_admin(request)
     if body.status not in REQUEST_STATUSES:
         raise HTTPException(status_code=422, detail="Invalid status")
     with db() as conn:

@@ -29,7 +29,7 @@ export function formatDate(iso: string) {
     : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function RequestsPanel({ token, onAuthError }: { token: string; onAuthError: () => void }) {
+export function RequestsPanel({ token, onAuthError }: { token: string | null; onAuthError: () => void }) {
   const { toast } = useToast();
   const [requests, setRequests] = useState<TemplateRequest[] | null>(null);
 

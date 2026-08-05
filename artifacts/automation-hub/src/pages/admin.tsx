@@ -1,5 +1,7 @@
-import { useCallback, useState } from 'react';
-import { KeyRound, LogOut, ShieldCheck } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useUser } from '@clerk/react';
+import { Link } from 'wouter';
+import { KeyRound, LogIn, LogOut, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,9 +20,33 @@ import { KeysPanel } from '@/components/admin/keys-panel';
 
 export default function Admin({ initialTab = 'overview' }: { initialTab?: string }) {
   const { toast } = useToast();
+  const { isLoaded, isSignedIn, user } = useUser();
   const [token, setToken] = useState<string | null>(() => getAdminToken());
   const [tokenInput, setTokenInput] = useState('');
   const [checking, setChecking] = useState(false);
+  // null = still probing; true = the signed-in account has admin access
+  const [sessionAdmin, setSessionAdmin] = useState<boolean | null>(null);
+
+  // If the user is signed in, check whether their account email unlocks admin.
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setSessionAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        await adminFetch('/admin/stats', null);
+        if (!cancelled) setSessionAdmin(true);
+      } catch {
+        if (!cancelled) setSessionAdmin(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn]);
 
   const unlock = async () => {
     const tok = tokenInput.trim();
@@ -47,21 +73,52 @@ export default function Admin({ initialTab = 'overview' }: { initialTab?: string
     setToken(null);
   }, []);
 
-  if (!token) {
+  const unlocked = sessionAdmin === true || Boolean(token);
+  const probing = !isLoaded || (isSignedIn && sessionAdmin === null && !token);
+
+  if (probing) {
     return (
-      <div className="max-w-md mx-auto py-16 px-4">
+      <div className="max-w-md mx-auto py-16 px-4 text-center text-muted-foreground">
+        Checking access…
+      </div>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <div className="max-w-md mx-auto py-16 px-4 space-y-4">
         <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <span className="bg-primary/10 text-primary p-2 rounded-xl">
-                <KeyRound className="h-5 w-5" />
+                <ShieldCheck className="h-5 w-5" />
               </span>
               Owner access
             </CardTitle>
             <CardDescription>
-              Enter your admin token to open the owner dashboard: usage metrics, template
-              requests, and issued API keys.
+              {isSignedIn
+                ? `You're signed in as ${user?.primaryEmailAddress?.emailAddress ?? 'this account'}, but it doesn't have admin access.`
+                : 'Sign in with the owner account to open the dashboard: usage metrics, template requests, and issued API keys.'}
             </CardDescription>
+          </CardHeader>
+          {!isSignedIn && (
+            <CardContent>
+              <Link href="/sign-in">
+                <Button className="w-full rounded-full gap-2">
+                  <LogIn className="h-4 w-4" /> Sign in
+                </Button>
+              </Link>
+            </CardContent>
+          )}
+        </Card>
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span className="bg-muted text-muted-foreground p-2 rounded-xl">
+                <KeyRound className="h-4 w-4" />
+              </span>
+              Or use an admin token
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -102,14 +159,16 @@ export default function Admin({ initialTab = 'overview' }: { initialTab?: string
             Usage metrics, user template requests, and issued API keys.
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-full gap-2"
-          onClick={handleAuthError}
-        >
-          <LogOut className="h-4 w-4" /> Lock
-        </Button>
+        {token && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-full gap-2"
+            onClick={handleAuthError}
+          >
+            <LogOut className="h-4 w-4" /> Lock
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue={initialTab}>

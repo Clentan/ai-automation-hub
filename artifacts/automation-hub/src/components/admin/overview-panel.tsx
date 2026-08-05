@@ -39,7 +39,7 @@ function breakdown(map: Record<string, number>): string {
   return entries.map(([k, v]) => `${v} ${k}`).join(' · ');
 }
 
-export function OverviewPanel({ token, onAuthError }: { token: string; onAuthError: () => void }) {
+export function OverviewPanel({ token, onAuthError }: { token: string | null; onAuthError: () => void }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
 
   const load = useCallback(async () => {

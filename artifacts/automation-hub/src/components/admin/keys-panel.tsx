@@ -12,7 +12,7 @@ import {
 import { adminFetch, type AdminKeyRow } from '@/lib/admin-api';
 import { formatDate } from './requests-panel';
 
-export function KeysPanel({ token, onAuthError }: { token: string; onAuthError: () => void }) {
+export function KeysPanel({ token, onAuthError }: { token: string | null; onAuthError: () => void }) {
   const [keys, setKeys] = useState<AdminKeyRow[] | null>(null);
 
   const load = useCallback(async () => {
