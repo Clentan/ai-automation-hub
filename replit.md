@@ -35,7 +35,8 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 - `/activity` Mocked recent-run activity feed
 - `/api-access` Personal API key (simulated, localStorage), connect instructions, plan tiers (Free current; Pro/Team "coming soon")
 - All data is client-side mock data in `artifacts/automation-hub/src/lib/data.ts`; no backend/database is used (user requested frontend only).
-- Business model: owner publishes their n8n automation templates; users connect via a provided API key; subscription-based later, free for now. Templates are authored by "AI Automation Hub" and powered by n8n.
+- Business model: owner publishes their n8n automation templates; users connect via API keys; subscription-based later, free for now. Templates are authored by "AI Automation Hub" and powered by n8n.
+- Access model (user's choice): SEPARATE KEY PER TEMPLATE. Each template has a "Request API key" button; keys are stored per template (localStorage 'ai-automation-hub-template-keys', managed via src/lib/use-api-keys.ts) and can be copied/regenerated/revoked on /api-access.
 
 ## User preferences
 

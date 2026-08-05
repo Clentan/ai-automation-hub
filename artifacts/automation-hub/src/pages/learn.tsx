@@ -37,7 +37,7 @@ const GUIDES = [
   {
     icon: KeyRound,
     title: 'Connecting with your API key',
-    description: 'Generate your personal API key and trigger automations from your own tools.',
+    description: 'Request a dedicated API key per template and trigger automations from your own tools.',
     tag: 'Essential',
     href: '/api-access',
   },
@@ -91,7 +91,7 @@ const APP_SECTIONS = [
     title: 'API Access',
     href: '/api-access',
     description:
-      'Generate your personal API key, see how to connect from your own tools, and check your plan (everyone is on the Free plan during early access).',
+      'Manage your template API keys — each automation has its own dedicated key. Copy, regenerate, or revoke keys, and check your plan (everyone is on the Free plan during early access).',
   },
 ];
 
@@ -104,15 +104,15 @@ const PIPELINE_STEPS = [
   },
   {
     icon: KeyRound,
-    title: '2. Get your API key',
+    title: '2. Request the template\'s API key',
     description:
-      'On the API Access page, generate your personal key. It identifies your account and is what links your tools to the hub.',
+      'Press "Request API key" on the template. You get a dedicated key that only works with that automation — revoking it never affects your other connections.',
   },
   {
     icon: Send,
     title: '3. Connect & trigger',
     description:
-      'Send a simple HTTP request from your app, script, or tool — with your API key in the header — to trigger the template. Automated and Scheduled templates can also start on their own.',
+      'Send a simple HTTP request from your app, script, or tool — with the template\'s key in the header — to trigger it. Automated and Scheduled templates can also start on their own.',
   },
   {
     icon: Server,
@@ -139,7 +139,7 @@ const FAQS = [
   },
   {
     q: 'How do I connect a template?',
-    a: 'Go to API Access and generate your personal API key, then trigger any template from your own tools using a simple HTTP request with that key.',
+    a: 'Press "Request API key" on any template to get a key dedicated to that automation, then trigger it from your own tools using a simple HTTP request. Each key only works with its own template, so revoking one never affects the others.',
   },
   {
     q: 'How much does it cost?',

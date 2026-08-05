@@ -1,29 +1,21 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useSearch } from 'wouter';
-import { KeyRound, Copy, RefreshCw, Check, Sparkles, Lock, Zap } from 'lucide-react';
+import { useSearch, Link } from 'wouter';
+import { KeyRound, Copy, RefreshCw, Check, Sparkles, Lock, Zap, Trash2, LayoutGrid } from 'lucide-react';
 import { MOCK_TEMPLATES } from '@/lib/data';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-
-const API_KEY_STORAGE = 'ai-automation-hub-api-key';
-
-function generateKey() {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let s = '';
-  for (let i = 0; i < 32; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return `aah_live_${s}`;
-}
+import { useApiKeys } from '@/lib/use-api-keys';
 
 const PLANS = [
   {
     name: 'Free',
     price: '$0',
     description: 'Full access while we are in early access',
-    features: ['All templates', 'Personal API key', 'Unlimited connections'],
+    features: ['All templates', 'One key per template', 'Unlimited connections'],
     current: true,
   },
   {
@@ -42,10 +34,14 @@ const PLANS = [
   },
 ];
 
+function maskKey(key: string) {
+  return `${key.slice(0, 12)}${'•'.repeat(12)}${key.slice(-4)}`;
+}
+
 export default function ApiAccess() {
   const { toast } = useToast();
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { keys, getKeyFor, requestKeyFor, regenerateKeyFor, revokeKeyFor } = useApiKeys();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const search = useSearch();
   const requestedTemplate = useMemo(() => {
@@ -53,27 +49,41 @@ export default function ApiAccess() {
     return id ? MOCK_TEMPLATES.find((t) => t.id === id) ?? null : null;
   }, [search]);
 
-  useEffect(() => {
-    setApiKey(localStorage.getItem(API_KEY_STORAGE));
-  }, []);
+  const requestedKey = requestedTemplate ? getKeyFor(requestedTemplate.id) : null;
 
-  const createKey = () => {
-    const key = generateKey();
-    localStorage.setItem(API_KEY_STORAGE, key);
-    setApiKey(key);
-    toast({ title: 'API key generated', description: 'Keep it secret — it identifies your account.' });
+  const handleRequest = (templateId: string, templateName: string) => {
+    requestKeyFor(templateId);
+    toast({
+      title: 'API key issued',
+      description: `Your key for "${templateName}" is ready. It only works with this automation.`,
+    });
   };
 
-  const copyKey = async () => {
-    if (!apiKey) return;
-    await navigator.clipboard.writeText(apiKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const handleRegenerate = (templateId: string, templateName: string) => {
+    regenerateKeyFor(templateId);
+    toast({
+      title: 'API key regenerated',
+      description: `The old key for "${templateName}" no longer works.`,
+    });
   };
 
-  const maskedKey = apiKey
-    ? `${apiKey.slice(0, 13)}${'•'.repeat(16)}${apiKey.slice(-4)}`
-    : null;
+  const handleRevoke = (templateId: string, templateName: string) => {
+    revokeKeyFor(templateId);
+    toast({
+      title: 'API key revoked',
+      description: `Access to "${templateName}" has been removed.`,
+      variant: 'destructive',
+    });
+  };
+
+  const copyKey = async (templateId: string, key: string) => {
+    await navigator.clipboard.writeText(key);
+    setCopiedId(templateId);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
+
+  const exampleKey = requestedKey?.key ?? keys[0]?.key ?? 'YOUR_TEMPLATE_KEY';
+  const exampleTemplateId = requestedTemplate?.id ?? keys[0]?.templateId ?? '{template_id}';
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
@@ -88,7 +98,7 @@ export default function ApiAccess() {
               <Badge className="gap-1 bg-primary text-primary-foreground uppercase tracking-wider text-[10px] font-bold"><Sparkles className="h-3 w-3" /> Free plan</Badge>
             </div>
             <p className="text-muted-foreground text-lg">
-              Connect your tools to any published automation using your personal API key.
+              Each automation has its own API key. Request a key per template — it only unlocks that automation.
             </p>
           </div>
         </div>
@@ -103,7 +113,7 @@ export default function ApiAccess() {
           {/* Requested template context */}
           {requestedTemplate && (
             <Card className="shadow-sm border-primary/30 bg-primary/5 rounded-2xl">
-              <CardContent className="p-5 flex items-center gap-4">
+              <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex -space-x-2 shrink-0">
                   {requestedTemplate.services.slice(0, 3).map((serviceId, i) => (
                     <div key={i} className="h-10 w-10 rounded-full bg-white border-2 border-card shadow-sm flex items-center justify-center" style={{ zIndex: 10 - i }}>
@@ -111,57 +121,97 @@ export default function ApiAccess() {
                     </div>
                   ))}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-foreground flex items-center gap-2">
                     <Zap className="h-4 w-4 text-primary shrink-0" />
-                    <span className="truncate">Requesting API access for: {requestedTemplate.name}</span>
+                    <span className="truncate">{requestedTemplate.name}</span>
                   </p>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {apiKey
-                      ? 'Your key below already unlocks this automation — use the request example with this template.'
-                      : 'Generate your API key below to connect this automation to your tools.'}
+                    {requestedKey
+                      ? 'You already have a key for this automation — it is listed below.'
+                      : 'Request a dedicated key to connect this automation to your tools.'}
                   </p>
                 </div>
+                {!requestedKey && (
+                  <Button
+                    onClick={() => handleRequest(requestedTemplate.id, requestedTemplate.name)}
+                    className="rounded-full px-6 gap-2 shrink-0 shadow-md"
+                  >
+                    <KeyRound className="h-4 w-4" /> Request key
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
 
-          {/* API Key */}
+          {/* Keys list */}
           <Card className="shadow-sm border-border/60 rounded-2xl overflow-hidden">
             <CardHeader className="bg-secondary/20 border-b border-border/40 pb-5">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <KeyRound className="h-5 w-5 text-primary" /> Your API key
+                <KeyRound className="h-5 w-5 text-primary" /> Your template keys
               </CardTitle>
               <CardDescription className="text-[15px]">
-                Use this key to authenticate requests. Every automation you connect runs under this key.
+                One key per automation. Revoking a key disconnects only that automation — everything else keeps running.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              {apiKey ? (
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 bg-secondary/30 rounded-xl px-5 py-3 border border-border/50">
-                    <code className="text-base font-mono truncate block text-foreground">
-                      {maskedKey}
-                    </code>
+            <CardContent className="p-0">
+              {keys.length === 0 ? (
+                <div className="flex flex-col items-center text-center gap-4 py-12 px-6">
+                  <div className="h-16 w-16 rounded-2xl bg-secondary/50 border flex items-center justify-center">
+                    <KeyRound className="h-7 w-7 text-muted-foreground" />
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" onClick={copyKey} className="gap-2 rounded-xl h-auto shadow-sm">
-                      {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                      {copied ? 'Copied' : 'Copy key'}
-                    </Button>
-                    <Button variant="secondary" onClick={createKey} className="gap-2 rounded-xl h-auto bg-secondary hover:bg-secondary/80">
-                      <RefreshCw className="h-4 w-4" /> Regenerate
-                    </Button>
+                  <div>
+                    <p className="font-semibold text-foreground mb-1">No keys yet</p>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Browse the template gallery and press "Request API key" on any automation you want to connect.
+                    </p>
                   </div>
+                  <Button asChild variant="outline" className="rounded-full px-6 gap-2 mt-1">
+                    <Link href="/templates"><LayoutGrid className="h-4 w-4" /> Browse templates</Link>
+                  </Button>
                 </div>
               ) : (
-                <div className="flex flex-col items-start gap-4">
-                  <p className="text-muted-foreground text-[15px]">
-                    You don't have an API key yet. Generate one to start connecting automations to your external tools.
-                  </p>
-                  <Button onClick={createKey} size="lg" className="gap-2 rounded-full px-6 shadow-md">
-                    <KeyRound className="h-4 w-4" /> Generate API key
-                  </Button>
+                <div className="divide-y divide-border/50">
+                  {keys.map((entry) => {
+                    const template = MOCK_TEMPLATES.find((t) => t.id === entry.templateId);
+                    if (!template) return null;
+                    return (
+                      <div key={entry.templateId} className="p-5 flex flex-col gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex -space-x-2 shrink-0">
+                            {template.services.slice(0, 3).map((serviceId, i) => (
+                              <div key={i} className="h-8 w-8 rounded-full bg-white border-2 border-card shadow-sm flex items-center justify-center" style={{ zIndex: 10 - i }}>
+                                <ServiceIcon serviceId={serviceId} className="h-4 w-4" />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-foreground truncate">{template.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Issued {new Date(entry.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <code className="flex-1 bg-secondary/30 rounded-lg px-4 py-2.5 text-sm font-mono truncate border border-border/50 text-foreground">
+                            {maskKey(entry.key)}
+                          </code>
+                          <div className="flex gap-2 shrink-0">
+                            <Button variant="outline" size="sm" onClick={() => copyKey(entry.templateId, entry.key)} className="gap-1.5 rounded-lg h-auto">
+                              {copiedId === entry.templateId ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                              {copiedId === entry.templateId ? 'Copied' : 'Copy'}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleRegenerate(entry.templateId, template.name)} className="gap-1.5 rounded-lg h-auto">
+                              <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleRevoke(entry.templateId, template.name)} className="gap-1.5 rounded-lg h-auto text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900/50">
+                              <Trash2 className="h-3.5 w-3.5" /> Revoke
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -172,15 +222,15 @@ export default function ApiAccess() {
             <CardHeader className="pb-4">
               <CardTitle className="text-xl">How to connect</CardTitle>
               <CardDescription className="text-[15px]">
-                Pick a template, then trigger it from your own tools with a single request.
+                Trigger an automation from your own tools using its dedicated key — the key only works with its own template.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-primary/0 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
                 <pre className="relative bg-[#0d1117] dark:bg-black text-blue-300 rounded-xl p-5 text-[13px] md:text-sm font-mono overflow-x-auto border border-[#30363d] shadow-inner">
-  <span className="text-purple-400">curl</span> -X POST https://api.aiautomationhub.dev/v1/templates/<span className="text-orange-300">{requestedTemplate ? requestedTemplate.id : '{template_id}'}</span>/run \
-    -H <span className="text-green-300">"Authorization: Bearer {apiKey ?? 'YOUR_API_KEY'}"</span> \
+  <span className="text-purple-400">curl</span> -X POST https://api.aiautomationhub.dev/v1/templates/<span className="text-orange-300">{exampleTemplateId}</span>/run \
+    -H <span className="text-green-300">"Authorization: Bearer {exampleKey}"</span> \
     -H <span className="text-green-300">"Content-Type: application/json"</span> \
     -d <span className="text-green-300">'&#123; "inputs": &#123; &#125; &#125;'</span>
                 </pre>

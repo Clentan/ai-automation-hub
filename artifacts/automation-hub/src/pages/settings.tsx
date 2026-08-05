@@ -51,6 +51,7 @@ export default function Settings() {
     localStorage.removeItem('ai-automation-hub-flows');
     localStorage.removeItem('ai-automation-hub-activity');
     localStorage.removeItem('ai-automation-hub-api-key');
+    localStorage.removeItem('ai-automation-hub-template-keys');
     toast({
       title: "Data cleared",
       description: "All local flows, activity, and API keys have been deleted.",

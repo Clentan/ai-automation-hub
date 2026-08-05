@@ -302,7 +302,7 @@ export default function Gallery() {
                   <p className="font-semibold text-foreground mb-1 text-base">Connect via API</p>
                   <p className="text-muted-foreground leading-relaxed">
                     This automation runs securely on our managed n8n infrastructure. Trigger it directly from
-                    your own applications using your personal API key. Check the{' '}
+                    your own applications using this template's dedicated API key. Check the{' '}
                     <Link href="/api-access" className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5">
                       API Access <ArrowRight className="h-3 w-3" />
                     </Link>{' '}
