@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useSearch, Link } from 'wouter';
 import { KeyRound, Copy, RefreshCw, Check, Sparkles, Lock, Zap, Trash2, LayoutGrid, LogIn, ShieldCheck } from 'lucide-react';
 import { useUser } from '@clerk/react';
-import { MOCK_TEMPLATES, TEMPLATES_COMING_SOON } from '@/lib/data';
+import { MOCK_TEMPLATES, isComingSoon } from '@/lib/data';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -186,7 +186,7 @@ export default function ApiAccess() {
                     <span className="truncate">{requestedTemplate.name}</span>
                   </p>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {TEMPLATES_COMING_SOON
+                    {isComingSoon(requestedTemplate)
                       ? 'This automation is coming soon — keys will be available at launch.'
                       : requestedKey
                         ? 'You already have a key for this automation — it is listed below.'
@@ -195,11 +195,11 @@ export default function ApiAccess() {
                 </div>
                 {!requestedKey && (
                   <Button
-                    disabled={TEMPLATES_COMING_SOON}
-                    onClick={() => !TEMPLATES_COMING_SOON && handleRequest(requestedTemplate.id, requestedTemplate.name)}
+                    disabled={isComingSoon(requestedTemplate)}
+                    onClick={() => !isComingSoon(requestedTemplate) && handleRequest(requestedTemplate.id, requestedTemplate.name)}
                     className="rounded-full px-6 gap-2 shrink-0 shadow-md"
                   >
-                    <KeyRound className="h-4 w-4" /> {TEMPLATES_COMING_SOON ? 'Coming soon' : 'Request key'}
+                    <KeyRound className="h-4 w-4" /> {isComingSoon(requestedTemplate) ? 'Coming soon' : 'Request key'}
                   </Button>
                 )}
               </CardContent>

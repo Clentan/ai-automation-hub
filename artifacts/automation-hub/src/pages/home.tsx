@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { MOCK_TEMPLATES, TEMPLATES_COMING_SOON } from '@/lib/data';
+import { MOCK_TEMPLATES, isComingSoon } from '@/lib/data';
 import { useFlowsContext } from '@/lib/flows-context';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { formatDistanceToNow } from 'date-fns';
@@ -127,8 +127,8 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {popular.map((t) => (
                 <Link key={t.id} href="/templates">
-                  <Card className={`h-full cursor-pointer transition-all duration-300 group rounded-2xl bg-card border-border/60 relative ${TEMPLATES_COMING_SOON ? 'opacity-60 grayscale' : 'hover:shadow-md hover:border-primary/30'}`}>
-                    {TEMPLATES_COMING_SOON && (
+                  <Card className={`h-full cursor-pointer transition-all duration-300 group rounded-2xl bg-card border-border/60 relative ${isComingSoon(t) ? 'opacity-60 grayscale' : 'hover:shadow-md hover:border-primary/30'}`}>
+                    {isComingSoon(t) && (
                       <Badge className="absolute -top-2.5 right-4 z-20 rounded-full bg-amber-500 hover:bg-amber-500 text-white border-0 shadow-sm px-3">
                         Coming soon
                       </Badge>

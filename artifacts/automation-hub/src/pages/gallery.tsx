@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Search, ChevronDown, Check, Zap, Users, Play, Clock, ArrowRight, KeyRound, Lightbulb } from 'lucide-react';
-import { MOCK_TEMPLATES, CATEGORIES, TEMPLATES_COMING_SOON, Template } from '@/lib/data';
+import { MOCK_TEMPLATES, CATEGORIES, isComingSoon, Template } from '@/lib/data';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { useFlowsContext } from '@/lib/flows-context';
 import { Input } from '@/components/ui/input';
@@ -190,17 +190,17 @@ export default function Gallery() {
               {filteredAndSorted.map((template, i) => (
                 <div 
                   key={template.id}
-                  onClick={() => !TEMPLATES_COMING_SOON && setSelectedTemplate(template)}
+                  onClick={() => !isComingSoon(template) && setSelectedTemplate(template)}
                   className={cn(
                     "group relative flex flex-col bg-card rounded-2xl border border-border/60 p-5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
-                    TEMPLATES_COMING_SOON
+                    isComingSoon(template)
                       ? "opacity-60 grayscale cursor-not-allowed"
                       : "hover:shadow-lg hover:border-primary/30 cursor-pointer"
                   )}
                   style={{ animationDelay: `${i * 30}ms`, animationFillMode: 'both' }}
                   data-testid={`card-template-${template.id}`}
                 >
-                  {TEMPLATES_COMING_SOON && (
+                  {isComingSoon(template) && (
                     <Badge className="absolute -top-2.5 right-4 z-20 rounded-full bg-amber-500 hover:bg-amber-500 text-white border-0 shadow-sm px-3">
                       Coming soon
                     </Badge>
@@ -245,14 +245,14 @@ export default function Gallery() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={TEMPLATES_COMING_SOON}
+                    disabled={isComingSoon(template)}
                     className="mt-4 w-full rounded-full gap-2 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-colors font-semibold disabled:opacity-70"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!TEMPLATES_COMING_SOON) setLocation(`/api-access?template=${template.id}`);
+                      if (!isComingSoon(template)) setLocation(`/api-access?template=${template.id}`);
                     }}
                   >
-                    {TEMPLATES_COMING_SOON ? (
+                    {isComingSoon(template) ? (
                       <><Clock className="h-3.5 w-3.5" /> Coming soon</>
                     ) : (
                       <><KeyRound className="h-3.5 w-3.5" /> Request API key</>

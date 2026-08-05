@@ -17,6 +17,13 @@ export interface Template {
   services: string[];
   steps: AutomationStep[];
   createdAt: string;
+  /** Live template — usable even while TEMPLATES_COMING_SOON is on. */
+  available?: boolean;
+}
+
+/** True when this template should show as "Coming soon" and be unusable. */
+export function isComingSoon(t: Template): boolean {
+  return TEMPLATES_COMING_SOON && !t.available;
 }
 
 // When true, every template shows as "Coming soon" and can't be used yet.
@@ -35,6 +42,24 @@ export const CATEGORIES = [
 ];
 
 export const MOCK_TEMPLATES: Template[] = [
+  {
+    id: 't-21',
+    name: 'QCR Scan — extract data from uploaded PDFs',
+    description: 'Send a PDF to a secure webhook and instantly get its extracted data back — no model required.',
+    author: 'AI Automation Hub',
+    type: 'Instant',
+    categories: ['Top picks', 'Data collection'],
+    usageCount: 199475,
+    services: ['webhook', 'pdf'],
+    createdAt: '2026-08-05T12:00:00Z',
+    available: true,
+    steps: [
+      { title: 'Webhook receives your file', description: 'POST a PDF from your website or app', serviceId: 'webhook' },
+      { title: 'Check the upload', description: 'Validates the incoming file', serviceId: 'webhook' },
+      { title: 'Extract from PDF', description: 'Pulls the text and data out of the document', serviceId: 'pdf' },
+      { title: 'Respond instantly', description: 'Returns the extracted data to your app', serviceId: 'webhook' }
+    ]
+  },
   {
     id: 't-1',
     name: 'Draft email replies using AI and save as drafts',

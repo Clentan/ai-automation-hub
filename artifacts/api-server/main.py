@@ -38,7 +38,7 @@ app = FastAPI(title="AI Automation Hub API", docs_url="/api/docs", openapi_url="
 
 # Server-side template catalog: keys can only be issued for these ids.
 # Keep in sync with the frontend catalog in artifacts/automation-hub/src/lib/data.ts.
-KNOWN_TEMPLATE_IDS = {f"t-{i}" for i in range(1, 21)}
+KNOWN_TEMPLATE_IDS = {f"t-{i}" for i in range(1, 22)}
 
 
 @contextmanager
