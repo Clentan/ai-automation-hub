@@ -147,7 +147,7 @@ const FAQS = [
   },
   {
     q: 'Can I request a custom automation?',
-    a: 'Custom template requests are planned. For now, browse the template gallery — new automations are added regularly.',
+    a: 'Yes — open the Templates page and press "Request a template" to describe the workflow you need and the tools involved. We review every request, and popular ideas are built and published to the gallery.',
   },
 ];
 

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Search, ChevronDown, Check, Zap, Users, Play, Clock, ArrowRight, KeyRound } from 'lucide-react';
+import { Search, ChevronDown, Check, Zap, Users, Play, Clock, ArrowRight, KeyRound, Lightbulb } from 'lucide-react';
 import { MOCK_TEMPLATES, CATEGORIES, Template } from '@/lib/data';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { useFlowsContext } from '@/lib/flows-context';
@@ -24,6 +24,7 @@ import {
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { RequestTemplateDialog } from '@/components/request-template-dialog';
 
 type SortOption = 'Popularity' | 'Newest' | 'Name';
 
@@ -91,13 +92,22 @@ export default function Gallery() {
               </p>
             </div>
             
-            <div className="flex-shrink-0 w-full md:w-auto relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search templates, apps, or tasks..." 
-                className="pl-12 h-12 w-full md:w-[320px] rounded-full bg-secondary/30 border-transparent focus-visible:bg-background focus-visible:border-primary/30 transition-all text-base shadow-sm hover:bg-secondary/50"
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto md:items-center">
+              <div className="flex-shrink-0 w-full sm:w-auto relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Input 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search templates, apps, or tasks..." 
+                  className="pl-12 h-12 w-full sm:w-[320px] rounded-full bg-secondary/30 border-transparent focus-visible:bg-background focus-visible:border-primary/30 transition-all text-base shadow-sm hover:bg-secondary/50"
+                />
+              </div>
+              <RequestTemplateDialog
+                trigger={
+                  <Button variant="outline" className="h-12 rounded-full px-5 gap-2 shadow-sm shrink-0">
+                    <Lightbulb className="h-4 w-4 text-primary" /> Request a template
+                  </Button>
+                }
               />
             </div>
           </div>
@@ -158,13 +168,22 @@ export default function Gallery() {
               <p className="text-muted-foreground max-w-md">
                 We couldn't find any templates matching "{search}" in the {activeCategory} category. Try a different search term.
               </p>
-              <Button 
-                variant="outline" 
-                className="mt-6 rounded-full px-6 shadow-sm"
-                onClick={() => { setSearch(''); setActiveCategory('All'); }}
-              >
-                Clear filters
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Button 
+                  variant="outline" 
+                  className="rounded-full px-6 shadow-sm"
+                  onClick={() => { setSearch(''); setActiveCategory('All'); }}
+                >
+                  Clear filters
+                </Button>
+                <RequestTemplateDialog
+                  trigger={
+                    <Button className="rounded-full px-6 gap-2 shadow-sm">
+                      <Lightbulb className="h-4 w-4" /> Request this as a template
+                    </Button>
+                  }
+                />
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
