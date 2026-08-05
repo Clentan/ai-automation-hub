@@ -20,6 +20,7 @@ import { ClerkProvider, SignIn, SignUp, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { resetKeysStore } from '@/lib/use-api-keys';
+import { WorkspaceChooser } from '@/components/workspace-chooser';
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,7 @@ function ClerkProviderWithRoutes() {
         <FlowsProvider>
           <TooltipProvider>
             <Router />
+            <WorkspaceChooser />
             <Toaster />
           </TooltipProvider>
         </FlowsProvider>
