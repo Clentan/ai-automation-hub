@@ -6,7 +6,8 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Templates', icon: LayoutGrid },
+  { href: '/', label: 'Home', icon: Home },
+  { href: '/templates', label: 'Templates', icon: LayoutGrid },
   { href: '/my-flows', label: 'My flows', icon: CheckSquare },
   { href: '/activity', label: 'Activity', icon: Activity },
 ];

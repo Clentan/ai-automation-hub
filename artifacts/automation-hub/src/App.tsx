@@ -5,6 +5,7 @@ import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { FlowsProvider } from '@/lib/flows-context';
 import { Shell } from '@/components/layout/shell';
 
+import Home from '@/pages/home';
 import Gallery from '@/pages/gallery';
 import MyFlows from '@/pages/my-flows';
 import ActivityLog from '@/pages/activity';
@@ -16,7 +17,8 @@ function Router() {
   return (
     <Shell>
       <Switch>
-        <Route path="/" component={Gallery} />
+        <Route path="/" component={Home} />
+        <Route path="/templates" component={Gallery} />
         <Route path="/my-flows" component={MyFlows} />
         <Route path="/activity" component={ActivityLog} />
         <Route component={NotFound} />
