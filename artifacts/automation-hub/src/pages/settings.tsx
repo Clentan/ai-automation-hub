@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSettings } from '@/lib/use-settings';
 import { revokeAllKeys } from '@/lib/use-api-keys';
+import { useUser } from '@clerk/react';
 import { useTheme } from 'next-themes';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -25,27 +26,44 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function Settings() {
-  const { settings, updateSettings, isLoaded } = useSettings();
+  const { settings, updateSettings } = useSettings();
+  const { user, isLoaded } = useUser();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const [name, setName] = useState(settings.name);
-  const [email, setEmail] = useState(settings.email);
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const email = user?.primaryEmailAddress?.emailAddress ?? '';
 
   useEffect(() => {
-    if (isLoaded) {
-      setName(settings.name);
-      setEmail(settings.email);
+    if (isLoaded && user) {
+      setName(user.fullName ?? '');
     }
-  }, [isLoaded, settings.name, settings.email]);
+  }, [isLoaded, user]);
 
-  const handleSaveProfile = () => {
-    updateSettings({ name, email });
-    toast({
-      title: "Profile updated",
-      description: "Your profile information has been saved successfully.",
-    });
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    const trimmed = name.trim();
+    const [firstName, ...rest] = trimmed.split(/\s+/);
+    setSaving(true);
+    try {
+      await user.update({ firstName: firstName ?? '', lastName: rest.join(' ') });
+      setName(user.fullName ?? trimmed);
+      toast({
+        title: "Profile updated",
+        description: "Your account name has been saved successfully.",
+      });
+    } catch (e) {
+      toast({
+        title: "Update failed",
+        description: e instanceof Error ? e.message : "Could not update your profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleClearData = async () => {
@@ -100,32 +118,46 @@ export default function Settings() {
                   <User className="h-5 w-5 text-primary" /> Profile
                 </CardTitle>
                 <CardDescription>
-                  Your personal information used for notifications and API access.
+                  Your account information from your sign-in profile.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input 
-                    id="name" 
-                    value={name} 
-                    onChange={(e) => setName(e.target.value)} 
-                    className="max-w-md"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
-                    className="max-w-md"
-                  />
-                </div>
+                {!isLoaded ? (
+                  <p className="text-sm text-muted-foreground">Loading your account…</p>
+                ) : !user ? (
+                  <p className="text-sm text-muted-foreground">Sign in to manage your profile.</p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input 
+                        id="name" 
+                        value={name} 
+                        onChange={(e) => setName(e.target.value)} 
+                        className="max-w-md"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        value={email} 
+                        readOnly
+                        disabled
+                        className="max-w-md"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your email is managed by your sign-in account and can't be changed here.
+                      </p>
+                    </div>
+                  </>
+                )}
               </CardContent>
               <CardFooter className="border-t bg-secondary/20 pt-4">
-                <Button onClick={handleSaveProfile} className="rounded-full shadow-sm">Save Changes</Button>
+                <Button onClick={handleSaveProfile} disabled={!user || saving} className="rounded-full shadow-sm">
+                  {saving ? 'Saving…' : 'Save Changes'}
+                </Button>
               </CardFooter>
             </Card>
           </motion.section>
@@ -199,7 +231,7 @@ export default function Settings() {
                   <div>
                     <h4 className="font-semibold text-foreground">Clear Local Data</h4>
                     <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                      Permanently delete all your flows, activity logs, and API key from this browser. This cannot be undone.
+                      Permanently delete all your flows, activity logs, and API key from this browser. Your sign-in account is not affected. This cannot be undone.
                     </p>
                   </div>
                   
@@ -213,7 +245,7 @@ export default function Settings() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete your active flows, clear your activity history, and remove your API key from this browser. Any connected tools will stop working until you generate a new key and update them.
+                          This will permanently delete your active flows, clear your activity history, and remove your API key from this browser. Your account and sign-in are not affected. Any connected tools will stop working until you generate a new key and update them.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

@@ -1,24 +1,18 @@
 import { useSyncExternalStore } from 'react';
 
 export interface UserSettings {
-  name: string;
-  email: string;
   notifications: boolean;
 }
 
 const SETTINGS_KEY = 'ai-automation-hub-settings';
 
 const defaultSettings: UserSettings = {
-  name: 'Alex Developer',
-  email: 'alex@example.com',
   notifications: true,
 };
 
 function sanitize(raw: unknown): UserSettings {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   return {
-    name: typeof obj.name === 'string' && obj.name.trim() ? obj.name : defaultSettings.name,
-    email: typeof obj.email === 'string' && obj.email.trim() ? obj.email : defaultSettings.email,
     notifications:
       typeof obj.notifications === 'boolean' ? obj.notifications : defaultSettings.notifications,
   };
