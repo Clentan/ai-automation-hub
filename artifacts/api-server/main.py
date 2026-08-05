@@ -468,14 +468,77 @@ class RunIn(BaseModel):
     inputs: dict = Field(default_factory=dict)
 
 
+# --------------------------------------------------------------------------
+# Rate limiting (in-memory sliding window)
+# --------------------------------------------------------------------------
+
+import threading
+from collections import defaultdict, deque
+
+# Per-key: successful run requests.
+RUN_LIMIT_PER_KEY = 60  # per minute
+# Per-IP: invalid-key (401) attempts — makes key guessing infeasible.
+INVALID_LIMIT_PER_IP = 10  # per minute
+RATE_WINDOW = 60.0  # seconds
+
+_rate_lock = threading.Lock()
+_rate_buckets: dict[str, deque] = defaultdict(deque)
+
+
+def _client_ip(request: Request) -> str:
+    """Client IP for rate limiting, spoof-resistant.
+
+    X-Forwarded-For is client-controllable except for the entry appended by
+    the trusted platform proxy immediately in front of this server. Using the
+    RIGHTMOST entry (appended last, by the proxy we trust) means a caller
+    cannot rotate buckets by sending fake leftmost values. If the header is
+    absent (direct connection), fall back to the socket peer address.
+    """
+    xff = request.headers.get("x-forwarded-for", "")
+    parts = [p.strip() for p in xff.split(",") if p.strip()]
+    if parts:
+        return parts[-1]
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_check(bucket: str, limit: int) -> Optional[int]:
+    """Returns None if allowed (and records the hit), else seconds to retry after."""
+    now = time.monotonic()
+    with _rate_lock:
+        q = _rate_buckets[bucket]
+        while q and now - q[0] > RATE_WINDOW:
+            q.popleft()
+        if len(q) >= limit:
+            return max(1, int(RATE_WINDOW - (now - q[0])) + 1)
+        q.append(now)
+        # Opportunistic cleanup of stale buckets to bound memory.
+        if len(_rate_buckets) > 10000:
+            for k in [k for k, v in _rate_buckets.items() if not v or now - v[-1] > RATE_WINDOW]:
+                _rate_buckets.pop(k, None)
+        return None
+
+
+def _rate_limit_or_429(bucket: str, limit: int) -> None:
+    retry_after = _rate_check(bucket, limit)
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
 @app.post("/api/v1/templates/{template_id}/run")
 def run_template(
     template_id: str,
+    request: Request,
     body: Optional[RunIn] = None,
     authorization: Optional[str] = Header(default=None),
 ):
     template_id = check_template_id(template_id)
+    ip = _client_ip(request)
     if not authorization or not authorization.lower().startswith("bearer "):
+        _rate_limit_or_429(f"ip401:{ip}", INVALID_LIMIT_PER_IP)
         raise HTTPException(status_code=401, detail="Missing Bearer API key")
     key = authorization.split(" ", 1)[1].strip()
     with db() as conn:
@@ -483,12 +546,16 @@ def run_template(
             "SELECT * FROM user_api_keys WHERE key_hash = %s", (hash_key(key),)
         ).fetchone()
         if not row:
+            # Throttle invalid-key attempts per IP to make brute forcing infeasible.
+            _rate_limit_or_429(f"ip401:{ip}", INVALID_LIMIT_PER_IP)
             raise HTTPException(status_code=401, detail="Invalid API key")
         if row["template_id"] != template_id:
             raise HTTPException(
                 status_code=403,
                 detail="This key is bound to a different template",
             )
+        # Per-key limit on successful (authorized) runs only.
+        _rate_limit_or_429(f"key:{row['key_hash']}", RUN_LIMIT_PER_KEY)
         run_id = str(uuid.uuid4())
         conn.execute(
             "INSERT INTO runs (id, template_id, client_id, status, created_at) VALUES (%s, %s, %s, %s, %s)",

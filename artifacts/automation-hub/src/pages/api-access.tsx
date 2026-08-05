@@ -313,6 +313,11 @@ export default function ApiAccess() {
               <p className="text-sm text-muted-foreground mt-4 font-medium">
                 This endpoint is live: it validates your key, checks that it matches the template, and queues a run.
               </p>
+              <div className="mt-4 rounded-lg border border-border/50 bg-secondary/20 px-4 py-3 text-sm text-muted-foreground space-y-1">
+                <p className="font-semibold text-foreground">Rate limits</p>
+                <p>Each key can start up to <span className="font-semibold text-foreground">60 runs per minute</span>. Requests with a missing or invalid key are limited to 10 attempts per minute per IP.</p>
+                <p>When you exceed a limit the API responds with <code className="font-mono text-xs bg-secondary/60 px-1 py-0.5 rounded">429 Too Many Requests</code> and a <code className="font-mono text-xs bg-secondary/60 px-1 py-0.5 rounded">Retry-After</code> header telling you how many seconds to wait.</p>
+              </div>
             </CardContent>
           </Card>
 
