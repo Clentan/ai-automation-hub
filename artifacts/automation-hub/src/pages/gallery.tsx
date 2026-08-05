@@ -265,29 +265,31 @@ export default function Gallery() {
       <Dialog open={!!selectedTemplate} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
         {selectedTemplate && (
           <DialogContent className="sm:max-w-[640px] p-0 overflow-hidden gap-0 rounded-3xl border-border/50 shadow-2xl max-h-[90dvh] flex flex-col">
-            <div className="bg-primary/5 p-6 md:p-8 border-b relative overflow-hidden shrink-0">
+            <div className="bg-primary/5 p-5 md:p-6 border-b relative overflow-hidden shrink-0">
               <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
                 <ServiceIcon serviceId={selectedTemplate.services[0]} className="w-64 h-64 grayscale" />
               </div>
-              <div className="relative z-10">
-                <div className="flex gap-3 mb-6">
+              <div className="relative z-10 flex items-start gap-4">
+                <div className="flex gap-2 shrink-0">
                   {selectedTemplate.services.map((serviceId, i) => (
-                    <div key={i} className="h-14 w-14 rounded-2xl bg-white shadow-sm border flex items-center justify-center">
-                      <ServiceIcon serviceId={serviceId} className="h-7 w-7" />
+                    <div key={i} className="h-10 w-10 rounded-xl bg-white shadow-sm border flex items-center justify-center">
+                      <ServiceIcon serviceId={serviceId} className="h-5 w-5" />
                     </div>
                   ))}
                 </div>
-                <DialogTitle className="text-2xl md:text-3xl font-bold mb-3 leading-tight">
-                  {selectedTemplate.name}
-                </DialogTitle>
-                <DialogDescription className="text-base md:text-lg text-muted-foreground/90 max-w-lg">
-                  {selectedTemplate.description}
-                </DialogDescription>
+                <div className="min-w-0">
+                  <DialogTitle className="text-lg md:text-xl font-bold mb-1.5 leading-tight">
+                    {selectedTemplate.name}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground/90">
+                    {selectedTemplate.description}
+                  </DialogDescription>
+                </div>
               </div>
             </div>
             
-            <div className="p-8 md:p-10 bg-card flex-1 min-h-0 overflow-y-auto overscroll-contain">
-              <div className="flex flex-wrap items-center gap-6 mb-10 text-sm border-b pb-6">
+            <div className="p-6 md:p-8 bg-card flex-1 min-h-0 overflow-y-auto overscroll-contain">
+              <div className="flex flex-wrap items-center gap-6 mb-6 text-sm border-b pb-4">
                 <div>
                   <span className="text-muted-foreground block mb-1 text-xs uppercase tracking-wider font-medium">Type</span>
                   <span className="font-semibold flex items-center gap-1.5">
@@ -304,13 +306,13 @@ export default function Gallery() {
               </div>
 
               <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">What this automation does</h4>
-              <div className="mb-10 rounded-2xl bg-secondary/30 border border-border/50 p-5">
+              <div className="mb-8 rounded-2xl bg-secondary/30 border border-border/50 p-5">
                 <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
                   {selectedTemplate.documentation ?? selectedTemplate.description}
                 </p>
               </div>
 
-              <h4 className="font-semibold mb-6 text-sm uppercase tracking-wider text-muted-foreground">Automation Pipeline</h4>
+              <h4 className="font-semibold mb-5 text-sm uppercase tracking-wider text-muted-foreground">Automation Pipeline</h4>
               <div className="space-y-0 relative">
                 {selectedTemplate.steps.map((step, index) => (
                   <div key={index} className="flex gap-5 relative pb-8 last:pb-0">
