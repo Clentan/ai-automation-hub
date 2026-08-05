@@ -20,7 +20,7 @@ export function Sidebar() {
         <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
           <Zap className="h-5 w-5" />
         </div>
-        <span className="font-semibold text-lg tracking-tight">AutoHub</span>
+        <span className="font-semibold text-lg tracking-tight">AI Automation Hub</span>
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-2">
@@ -70,7 +70,7 @@ export function MobileNav() {
           <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
             <Zap className="h-5 w-5" />
           </div>
-          <span className="font-semibold text-lg tracking-tight">AutoHub</span>
+          <span className="font-semibold text-lg tracking-tight">AI Automation Hub</span>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
           {NAV_ITEMS.map((item) => {
@@ -115,7 +115,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <div className="bg-primary text-primary-foreground p-1 rounded-md">
               <Zap className="h-4 w-4" />
             </div>
-            <span className="font-semibold tracking-tight">AutoHub</span>
+            <span className="font-semibold tracking-tight">AI Automation Hub</span>
           </div>
         </header>
         
