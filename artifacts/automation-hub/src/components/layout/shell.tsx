@@ -17,16 +17,29 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const [location] = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
   const { settings } = useSettings();
   const initials = settings.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() || 'AA';
 
   return (
-    <div className="flex h-full w-[240px] flex-col border-r bg-sidebar">
-      <div className="p-4 md:p-6 flex items-center gap-3">
-        <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm">
+    <div className={cn(
+      "flex h-full flex-col border-r bg-sidebar transition-all duration-300",
+      collapsed ? "w-[68px]" : "w-[240px]"
+    )}>
+      <div className={cn("flex items-center gap-2 p-4", collapsed ? "flex-col justify-center px-2 py-4 gap-3" : "md:px-4 md:py-5")}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setCollapsed((c) => !c)}
+          className="shrink-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm shrink-0">
           <Zap className="h-5 w-5" />
         </div>
-        <span className="font-semibold text-lg tracking-tight">AI Automation Hub</span>
+        {!collapsed && <span className="font-semibold text-lg tracking-tight leading-tight">AI Automation Hub</span>}
       </div>
 
       <nav className="flex-1 space-y-1.5 px-3 py-2">
@@ -35,32 +48,44 @@ export function Sidebar() {
           return (
             <Link key={item.href} href={item.href}>
               <div
+                title={collapsed ? item.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer",
+                  "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all cursor-pointer",
+                  collapsed ? "justify-center px-0" : "px-3",
                   isActive 
                     ? "bg-primary/10 text-primary shadow-sm" 
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
-                <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-sidebar-foreground/50")} />
-                {item.label}
+                <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/50")} />
+                {!collapsed && item.label}
               </div>
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border/50">
+      <div className={cn("border-t border-sidebar-border/50", collapsed ? "p-2" : "p-4")}>
         <Link href="/settings">
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-sidebar-accent transition-colors -mx-3">
-            <Avatar className="h-8 w-8 border border-border">
+          <div
+            title={collapsed ? 'Settings' : undefined}
+            className={cn(
+              "flex items-center gap-3 rounded-lg cursor-pointer hover:bg-sidebar-accent transition-colors",
+              collapsed ? "justify-center py-2" : "px-3 py-2 -mx-3"
+            )}
+          >
+            <Avatar className="h-8 w-8 border border-border shrink-0">
               <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initials}</AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{settings.name}</div>
-              <div className="text-xs text-muted-foreground truncate">{settings.email}</div>
-            </div>
-            <SettingsIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{settings.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{settings.email}</div>
+                </div>
+                <SettingsIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              </>
+            )}
           </div>
         </Link>
       </div>
