@@ -33,7 +33,9 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 - `/` Template gallery: search, category tabs, sort, template detail dialog with "Use this template"
 - `/my-flows` Flows created from templates: toggle on/off, rename, delete (persisted in localStorage)
 - `/activity` Mocked recent-run activity feed
+- `/api-access` Personal API key (simulated, localStorage), connect instructions, plan tiers (Free current; Pro/Team "coming soon")
 - All data is client-side mock data in `artifacts/automation-hub/src/lib/data.ts`; no backend/database is used (user requested frontend only).
+- Business model: owner publishes their n8n automation templates; users connect via a provided API key; subscription-based later, free for now. Templates are authored by "AI Automation Hub" and powered by n8n.
 
 ## User preferences
 

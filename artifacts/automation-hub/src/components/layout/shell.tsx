@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { LayoutGrid, CheckSquare, Zap, Activity, Home, Search, BookOpen, User, Menu } from 'lucide-react';
+import { LayoutGrid, CheckSquare, Zap, Activity, Home, Search, BookOpen, User, Menu, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/templates', label: 'Templates', icon: LayoutGrid },
   { href: '/my-flows', label: 'My flows', icon: CheckSquare },
   { href: '/activity', label: 'Activity', icon: Activity },
+  { href: '/api-access', label: 'API Access', icon: KeyRound },
 ];
 
 export function Sidebar() {

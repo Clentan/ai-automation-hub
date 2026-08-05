@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Search, ChevronDown, Check, Zap, Users, Play, Clock } from 'lucide-react';
 import { MOCK_TEMPLATES, CATEGORIES, Template } from '@/lib/data';
 import { ServiceIcon } from '@/components/icons/service-icons';
@@ -280,6 +280,23 @@ export default function Gallery() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-8 rounded-lg border bg-secondary/30 p-4 flex items-start gap-3">
+                <div className="bg-primary/10 text-primary p-2 rounded-md shrink-0">
+                  <Zap className="h-4 w-4" />
+                </div>
+                <div className="text-sm">
+                  <p className="font-medium mb-0.5">Connect via API</p>
+                  <p className="text-muted-foreground">
+                    This automation is powered by n8n and runs on our infrastructure. Trigger it from
+                    your own tools with your personal API key — see the{' '}
+                    <Link href="/api-access" className="text-primary font-medium hover:underline">
+                      API Access
+                    </Link>{' '}
+                    page.
+                  </p>
+                </div>
               </div>
             </div>
 
