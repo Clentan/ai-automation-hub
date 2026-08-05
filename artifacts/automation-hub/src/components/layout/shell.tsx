@@ -257,9 +257,25 @@ export function MobileNav() {
   );
 }
 
+// The owner lands on their own dashboard: visiting the public home page
+// while signed in as admin redirects to /admin.
+function AdminHomeRedirect() {
+  const isAdmin = useIsAdmin();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAdmin && location === '/') {
+      setLocation('/admin', { replace: true });
+    }
+  }, [isAdmin, location, setLocation]);
+
+  return null;
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col md:flex-row bg-background">
+      <AdminHomeRedirect />
       {/* Desktop Sidebar */}
       <div className="hidden md:block shrink-0 h-[100dvh] sticky top-0">
         <Sidebar />
