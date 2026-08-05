@@ -206,31 +206,6 @@ export default function Learn() {
             </div>
           </motion.div>
 
-          {/* Connecting via API */}
-          <motion.div variants={item} className="space-y-5">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-                <KeyRound className="h-6 w-6 text-primary" /> Connecting via API
-              </h2>
-              <p className="text-muted-foreground text-base mt-1 font-medium max-w-2xl">
-                Each template's key goes in the Authorization header, and the template id goes in the URL. A connection looks like this:
-              </p>
-            </div>
-            <Card className="bg-card border-border/60 shadow-sm">
-              <CardContent className="p-6">
-                <pre className="bg-[#0d1117] dark:bg-black text-blue-300 rounded-xl p-5 text-[13px] md:text-sm font-mono overflow-x-auto border border-[#30363d] shadow-inner">
-  <span className="text-purple-400">curl</span> -X POST https://api.aiautomationhub.dev/v1/templates/<span className="text-orange-300">&#123;template_id&#125;</span>/run \
-    -H <span className="text-green-300">"Authorization: Bearer &#123;template_api_key&#125;"</span> \
-    -H <span className="text-green-300">"Content-Type: application/json"</span> \
-    -d <span className="text-green-300">'&#123; "inputs": &#123; &#125; &#125;'</span>
-                </pre>
-                <p className="text-sm text-muted-foreground mt-4 font-medium">
-                  Because each key is bound to one template, a key can never trigger any automation other than its own. Endpoints are illustrative — live API access is rolling out with early access.
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-
           {/* The application */}
           <motion.div variants={item} className="space-y-5">
             <div>
