@@ -38,6 +38,7 @@ export async function adminFetch<T>(
   return res.json() as Promise<T>;
 }
 
+const ADMIN_PROBE_STORAGE = 'ai-automation-hub-is-admin';
 export interface TemplateRequest {
   id: string;
   title: string;
@@ -65,4 +66,45 @@ export interface AdminKeyRow {
   templateId: string;
   keySuffix: string;
   createdAt: string;
+}
+
+const adminProbes = new Map<string, Promise<boolean>>();
+
+/**
+ * Probes GET /api/admin/stats once per browser session for the given
+ * signed-in user (Clerk user id), using the session cookie. Resolves true
+ * only on a 200 (owner); 404/anything else means no admin access.
+ * Caching is keyed by user id so a result from before sign-in (or from a
+ * different account) is never reused.
+ */
+export function probeAdminAccess(userId: string): Promise<boolean> {
+  const storageKey = `${ADMIN_PROBE_STORAGE}:${userId}`;
+  const cached = sessionStorage.getItem(storageKey);
+  if (cached !== null) return Promise.resolve(cached === 'true');
+  let probe = adminProbes.get(userId);
+  if (!probe) {
+    probe = fetch(`${API_BASE}/admin/stats`, { credentials: 'same-origin' })
+      .then((res) => {
+        const isAdmin = res.ok;
+        sessionStorage.setItem(storageKey, String(isAdmin));
+        return isAdmin;
+      })
+      .catch(() => {
+        // Network failure: don't cache, allow a retry on next mount.
+        adminProbes.delete(userId);
+        return false;
+      });
+    adminProbes.set(userId, probe);
+  }
+  return probe;
+}
+
+export function clearAdminProbe() {
+  for (let i = sessionStorage.length - 1; i >= 0; i--) {
+    const key = sessionStorage.key(i);
+    if (key === ADMIN_PROBE_STORAGE || key?.startsWith(`${ADMIN_PROBE_STORAGE}:`)) {
+      sessionStorage.removeItem(key);
+    }
+  }
+  adminProbes.clear();
 }

@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'wouter';
-import { LayoutGrid, CheckSquare, Zap, Activity, Home, BookOpen, Menu, Settings as SettingsIcon, LogIn, LogOut, KeyRound } from 'lucide-react';
+import { LayoutGrid, CheckSquare, Zap, Activity, Home, BookOpen, Menu, Settings as SettingsIcon, LogIn, LogOut, KeyRound, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser, useClerk } from '@clerk/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { probeAdminAccess, clearAdminProbe } from '@/lib/admin-api';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home', icon: Home },
@@ -16,7 +17,39 @@ const NAV_ITEMS = [
   { href: '/learn', label: 'Learn', icon: BookOpen },
 ];
 
+const ADMIN_NAV_ITEM = { href: '/admin', label: 'Admin', icon: ShieldCheck };
+
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+// Hidden by default; the link only appears after the admin probe returns 200,
+// so non-owners never see a flicker of the Admin item. The probe is cached
+// per account, so signing in re-checks even if an anonymous visit happened first.
+export function useIsAdmin(): boolean {
+  const { user, isLoaded } = useUser();
+  const userId = user?.id ?? null;
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (isLoaded && userId) {
+      probeAdminAccess(userId).then((result) => {
+        if (active) setIsAdmin(result);
+      });
+    } else {
+      setIsAdmin(false);
+    }
+    return () => {
+      active = false;
+    };
+  }, [isLoaded, userId]);
+
+  return isAdmin;
+}
+
+function useNavItems() {
+  const isAdmin = useIsAdmin();
+  return isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
+}
 
 function useAccount() {
   const { user, isLoaded } = useUser();
@@ -37,7 +70,10 @@ function useAccount() {
     email,
     initials,
     imageUrl: user?.imageUrl,
-    signOut: () => signOut({ redirectUrl: basePath || '/' }),
+    signOut: () => {
+      clearAdminProbe();
+      return signOut({ redirectUrl: basePath || '/' });
+    },
   };
 }
 
@@ -109,6 +145,7 @@ function AccountFooter({ collapsed, onNavigate }: { collapsed?: boolean; onNavig
 export function Sidebar() {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const navItems = useNavItems();
 
   return (
     <div className={cn(
@@ -137,7 +174,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1.5 px-3 py-2">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = location === item.href;
           return (
             <Link key={item.href} href={item.href}>
@@ -174,6 +211,7 @@ export function Sidebar() {
 export function MobileNav() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const navItems = useNavItems();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -190,7 +228,7 @@ export function MobileNav() {
           <span className="font-semibold text-lg tracking-tight">AI Automation Hub</span>
         </div>
         <nav className="flex-1 space-y-1.5 px-3 py-4">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.href} href={item.href}>
@@ -219,9 +257,25 @@ export function MobileNav() {
   );
 }
 
+// The owner lands on their own dashboard: visiting the public home page
+// while signed in as admin redirects to /admin.
+function AdminHomeRedirect() {
+  const isAdmin = useIsAdmin();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAdmin && location === '/') {
+      setLocation('/admin', { replace: true });
+    }
+  }, [isAdmin, location, setLocation]);
+
+  return null;
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col md:flex-row bg-background">
+      <AdminHomeRedirect />
       {/* Desktop Sidebar */}
       <div className="hidden md:block shrink-0 h-[100dvh] sticky top-0">
         <Sidebar />
