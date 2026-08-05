@@ -40,6 +40,16 @@ app = FastAPI(title="AI Automation Hub API", docs_url="/api/docs", openapi_url="
 # Keep in sync with the frontend catalog in artifacts/automation-hub/src/lib/data.ts.
 KNOWN_TEMPLATE_IDS = {f"t-{i}" for i in range(1, 22)}
 
+# Per-template n8n webhook targets. The URLs stay server-side only — API
+# callers never see them; the run endpoint proxies to them ("masking").
+TEMPLATE_WEBHOOKS = {
+    tid: url
+    for tid, url in {
+        "t-21": os.environ.get("N8N_WEBHOOK_URL", "").strip(),  # QCR Scan
+    }.items()
+    if url
+}
+
 
 @contextmanager
 def db():
@@ -548,10 +558,9 @@ def _rate_limit_or_429(bucket: str, limit: int) -> None:
 
 
 @app.post("/api/v1/templates/{template_id}/run")
-def run_template(
+async def run_template(
     template_id: str,
     request: Request,
-    body: Optional[RunIn] = None,
     authorization: Optional[str] = Header(default=None),
 ):
     template_id = check_template_id(template_id)
@@ -580,7 +589,37 @@ def run_template(
             "INSERT INTO runs (id, template_id, client_id, status, created_at) VALUES (%s, %s, %s, %s, %s)",
             (run_id, template_id, row["user_id"], "queued", now_iso()),
         )
-    return {"ok": True, "runId": run_id, "templateId": template_id, "status": "queued"}
+
+    webhook_url = TEMPLATE_WEBHOOKS.get(template_id)
+    if not webhook_url:
+        return {"ok": True, "runId": run_id, "templateId": template_id, "status": "queued"}
+
+    # Forward the caller's payload to the template's n8n webhook, masking its
+    # URL behind this API. Content is passed through as-is (JSON or multipart).
+    raw = await request.body()
+    fwd_headers = {}
+    content_type = request.headers.get("content-type")
+    if content_type:
+        fwd_headers["Content-Type"] = content_type
+    try:
+        async with httpx.AsyncClient(timeout=90) as client:
+            resp = await client.post(webhook_url, content=raw, headers=fwd_headers)
+        succeeded = resp.status_code < 400
+        try:
+            result = resp.json()
+        except ValueError:
+            result = resp.text
+    except httpx.HTTPError:
+        with db() as conn:
+            conn.execute("UPDATE runs SET status = %s WHERE id = %s", ("failed", run_id))
+        raise HTTPException(status_code=502, detail="The automation backend is unreachable. Try again shortly.")
+
+    status = "succeeded" if succeeded else "failed"
+    with db() as conn:
+        conn.execute("UPDATE runs SET status = %s WHERE id = %s", (status, run_id))
+    if not succeeded:
+        raise HTTPException(status_code=502, detail="The automation failed to process this request.")
+    return {"ok": True, "runId": run_id, "templateId": template_id, "status": status, "result": result}
 
 
 @app.get("/api/v1/templates/{template_id}/runs")
