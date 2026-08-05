@@ -152,8 +152,7 @@ export default function Home() {
                       </div>
                       <div className="font-semibold leading-tight line-clamp-2 text-[15px] group-hover:text-primary transition-colors">{t.name}</div>
                       <div className="mt-auto flex items-center gap-1.5 text-xs font-medium text-muted-foreground pt-3 border-t border-border/50">
-                        <Users className="h-3.5 w-3.5" />
-                        {formatCount(t.usageCount)} users
+                        By {t.author}
                       </div>
                     </CardContent>
                   </Card>

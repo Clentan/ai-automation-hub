@@ -234,12 +234,8 @@ export default function Gallery() {
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs font-medium text-muted-foreground pt-4 border-t border-border/50">
-                    <span className="truncate mr-2 text-foreground/70">By {template.author}</span>
-                    <div className="flex items-center gap-1.5 shrink-0 bg-secondary/50 px-2 py-1 rounded-md">
-                      <Users className="h-3.5 w-3.5" />
-                      <span>{(template.usageCount / 1000).toFixed(1)}k</span>
-                    </div>
+                  <div className="flex items-center text-xs font-medium text-muted-foreground pt-4 border-t border-border/50">
+                    <span className="truncate text-foreground/70">By {template.author}</span>
                   </div>
 
                   <Button
@@ -305,10 +301,13 @@ export default function Gallery() {
                   <span className="text-muted-foreground block mb-1 text-xs uppercase tracking-wider font-medium">Author</span>
                   <span className="font-semibold">{selectedTemplate.author}</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground block mb-1 text-xs uppercase tracking-wider font-medium">Usage</span>
-                  <span className="font-semibold">{(selectedTemplate.usageCount / 1000).toFixed(1)}k runs</span>
-                </div>
+              </div>
+
+              <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">What this automation does</h4>
+              <div className="mb-10 rounded-2xl bg-secondary/30 border border-border/50 p-5">
+                <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
+                  {selectedTemplate.documentation ?? selectedTemplate.description}
+                </p>
               </div>
 
               <h4 className="font-semibold mb-6 text-sm uppercase tracking-wider text-muted-foreground">Automation Pipeline</h4>

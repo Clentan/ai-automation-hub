@@ -19,6 +19,8 @@ export interface Template {
   createdAt: string;
   /** Live template — usable even while TEMPLATES_COMING_SOON is on. */
   available?: boolean;
+  /** Longer documentation shown in the template detail dialog. */
+  documentation?: string;
 }
 
 /** True when this template should show as "Coming soon" and be unusable. */
@@ -53,6 +55,12 @@ export const MOCK_TEMPLATES: Template[] = [
     services: ['webhook', 'pdf'],
     createdAt: '2026-08-05T12:00:00Z',
     available: true,
+    documentation:
+      'QCR Scan turns any PDF into structured data in a single request — no AI model or training needed.\n\n' +
+      'How it works: your website or app sends a PDF file to this template\'s secure webhook (a POST request with your API key). ' +
+      'The automation checks the upload is a valid file, extracts all the text and data from the PDF, and sends the result straight back in the response — usually within seconds.\n\n' +
+      'Use it for: scanning invoices, receipts, forms, contracts, or any document workflow where you need the contents of a PDF as usable data.\n\n' +
+      'To connect: request an API key for this template, then POST your PDF to the run endpoint shown on the API access page, using the key in the X-API-Key header.',
     steps: [
       { title: 'Webhook receives your file', description: 'POST a PDF from your website or app', serviceId: 'webhook' },
       { title: 'Check the upload', description: 'Validates the incoming file', serviceId: 'webhook' },
