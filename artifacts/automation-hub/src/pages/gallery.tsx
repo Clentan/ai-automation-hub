@@ -264,8 +264,8 @@ export default function Gallery() {
       {/* Template Detail Dialog */}
       <Dialog open={!!selectedTemplate} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
         {selectedTemplate && (
-          <DialogContent className="sm:max-w-[640px] p-0 overflow-hidden gap-0 rounded-3xl border-border/50 shadow-2xl">
-            <div className="bg-primary/5 p-8 md:p-10 border-b relative overflow-hidden">
+          <DialogContent className="sm:max-w-[640px] p-0 overflow-hidden gap-0 rounded-3xl border-border/50 shadow-2xl max-h-[90dvh] flex flex-col">
+            <div className="bg-primary/5 p-6 md:p-8 border-b relative overflow-hidden shrink-0">
               <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
                 <ServiceIcon serviceId={selectedTemplate.services[0]} className="w-64 h-64 grayscale" />
               </div>
@@ -286,7 +286,7 @@ export default function Gallery() {
               </div>
             </div>
             
-            <div className="p-8 md:p-10 bg-card max-h-[60vh] overflow-y-auto overscroll-contain">
+            <div className="p-8 md:p-10 bg-card flex-1 min-h-0 overflow-y-auto overscroll-contain">
               <div className="flex flex-wrap items-center gap-6 mb-10 text-sm border-b pb-6">
                 <div>
                   <span className="text-muted-foreground block mb-1 text-xs uppercase tracking-wider font-medium">Type</span>
@@ -346,7 +346,7 @@ export default function Gallery() {
               </div>
             </div>
 
-            <DialogFooter className="p-6 md:p-8 sm:justify-between border-t bg-secondary/10">
+            <DialogFooter className="p-6 md:p-8 sm:justify-between border-t bg-secondary/10 shrink-0">
               <Button
                 variant="outline"
                 onClick={() => {
