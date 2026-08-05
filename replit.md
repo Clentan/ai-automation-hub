@@ -1,6 +1,6 @@
-# [Project name]
+# AI Automation Hub
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A frontend-only React web app for browsing AI automation templates, creating flows from them, and managing flows — inspired by Power Automate's template gallery.
 
 ## Run & Operate
 
@@ -30,7 +30,10 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- `/` Template gallery: search, category tabs, sort, template detail dialog with "Use this template"
+- `/my-flows` Flows created from templates: toggle on/off, rename, delete (persisted in localStorage)
+- `/activity` Mocked recent-run activity feed
+- All data is client-side mock data in `artifacts/automation-hub/src/lib/data.ts`; no backend/database is used (user requested frontend only).
 
 ## User preferences
 
