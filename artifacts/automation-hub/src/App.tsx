@@ -10,6 +10,7 @@ import Gallery from '@/pages/gallery';
 import MyFlows from '@/pages/my-flows';
 import ActivityLog from '@/pages/activity';
 import ApiAccess from '@/pages/api-access';
+import Learn from '@/pages/learn';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ function Router() {
         <Route path="/my-flows" component={MyFlows} />
         <Route path="/activity" component={ActivityLog} />
         <Route path="/api-access" component={ApiAccess} />
+        <Route path="/learn" component={Learn} />
         <Route component={NotFound} />
       </Switch>
     </Shell>

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/my-flows', label: 'My flows', icon: CheckSquare },
   { href: '/activity', label: 'Activity', icon: Activity },
   { href: '/api-access', label: 'API Access', icon: KeyRound },
+  { href: '/learn', label: 'Learn', icon: BookOpen },
 ];
 
 export function Sidebar() {
