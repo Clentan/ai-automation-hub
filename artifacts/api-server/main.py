@@ -398,6 +398,23 @@ def list_template_requests(request: Request):
 
 class RequestStatusIn(BaseModel):
     status: str = Field(min_length=1, max_length=20)
+def _clerk_user_count() -> int | None:
+    """Total signed-up accounts, from Clerk. None if unavailable."""
+    if not CLERK_SECRET_KEY:
+        return None
+    try:
+        resp = httpx.get(
+            f"{CLERK_API}/v1/users/count",
+            headers={"Authorization": f"Bearer {CLERK_SECRET_KEY}"},
+            timeout=5,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("total_count")
+    except Exception:
+        pass
+    return None
+
+
 @app.get("/api/admin/stats")
 def admin_stats(request: Request):
     require_admin(request)
@@ -432,7 +449,9 @@ def admin_stats(request: Request):
                 "ORDER BY created_at DESC LIMIT 10"
             ).fetchall()
         ]
+    registered_users = _clerk_user_count()
     return {
+        "registeredUsers": registered_users,
         "clients": clients,
         "keysIssued": keys_issued,
         "templatesWithKeys": templates_with_keys,

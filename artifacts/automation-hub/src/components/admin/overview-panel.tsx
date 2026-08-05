@@ -66,8 +66,9 @@ export function OverviewPanel({ token, onAuthError }: { token: string | null; on
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Users} label="Clients with keys" value={stats.clients} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard icon={Users} label="Registered users" value={stats.registeredUsers ?? 0} />
+        <StatCard icon={KeyRound} label="Clients with keys" value={stats.clients} />
         <StatCard
           icon={KeyRound}
           label="API keys issued"

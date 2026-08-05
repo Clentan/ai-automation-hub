@@ -48,6 +48,7 @@ export interface TemplateRequest {
 }
 
 export interface AdminStats {
+  registeredUsers: number | null;
   clients: number;
   keysIssued: number;
   templatesWithKeys: number;
