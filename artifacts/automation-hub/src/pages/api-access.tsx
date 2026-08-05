@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { KeyRound, Copy, RefreshCw, Check, Sparkles, Lock } from 'lucide-react';
+import { useSearch } from 'wouter';
+import { KeyRound, Copy, RefreshCw, Check, Sparkles, Lock, Zap } from 'lucide-react';
+import { MOCK_TEMPLATES } from '@/lib/data';
+import { ServiceIcon } from '@/components/icons/service-icons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -43,6 +46,12 @@ export default function ApiAccess() {
   const { toast } = useToast();
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const search = useSearch();
+  const requestedTemplate = useMemo(() => {
+    const id = new URLSearchParams(search).get('template');
+    return id ? MOCK_TEMPLATES.find((t) => t.id === id) ?? null : null;
+  }, [search]);
 
   useEffect(() => {
     setApiKey(localStorage.getItem(API_KEY_STORAGE));
@@ -91,6 +100,32 @@ export default function ApiAccess() {
           animate={{ opacity: 1, y: 0 }}
           className="p-6 md:p-8 max-w-4xl mx-auto w-full space-y-8 pb-20"
         >
+          {/* Requested template context */}
+          {requestedTemplate && (
+            <Card className="shadow-sm border-primary/30 bg-primary/5 rounded-2xl">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="flex -space-x-2 shrink-0">
+                  {requestedTemplate.services.slice(0, 3).map((serviceId, i) => (
+                    <div key={i} className="h-10 w-10 rounded-full bg-white border-2 border-card shadow-sm flex items-center justify-center" style={{ zIndex: 10 - i }}>
+                      <ServiceIcon serviceId={serviceId} className="h-5 w-5" />
+                    </div>
+                  ))}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate">Requesting API access for: {requestedTemplate.name}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {apiKey
+                      ? 'Your key below already unlocks this automation — use the request example with this template.'
+                      : 'Generate your API key below to connect this automation to your tools.'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* API Key */}
           <Card className="shadow-sm border-border/60 rounded-2xl overflow-hidden">
             <CardHeader className="bg-secondary/20 border-b border-border/40 pb-5">
@@ -144,7 +179,7 @@ export default function ApiAccess() {
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-primary/0 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
                 <pre className="relative bg-[#0d1117] dark:bg-black text-blue-300 rounded-xl p-5 text-[13px] md:text-sm font-mono overflow-x-auto border border-[#30363d] shadow-inner">
-  <span className="text-purple-400">curl</span> -X POST https://api.aiautomationhub.dev/v1/templates/<span className="text-orange-300">&#123;template_id&#125;</span>/run \
+  <span className="text-purple-400">curl</span> -X POST https://api.aiautomationhub.dev/v1/templates/<span className="text-orange-300">{requestedTemplate ? requestedTemplate.id : '{template_id}'}</span>/run \
     -H <span className="text-green-300">"Authorization: Bearer {apiKey ?? 'YOUR_API_KEY'}"</span> \
     -H <span className="text-green-300">"Content-Type: application/json"</span> \
     -d <span className="text-green-300">'&#123; "inputs": &#123; &#125; &#125;'</span>

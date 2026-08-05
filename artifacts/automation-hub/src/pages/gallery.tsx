@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Search, ChevronDown, Check, Zap, Users, Play, Clock, ArrowRight } from 'lucide-react';
+import { Search, ChevronDown, Check, Zap, Users, Play, Clock, ArrowRight, KeyRound } from 'lucide-react';
 import { MOCK_TEMPLATES, CATEGORIES, Template } from '@/lib/data';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { useFlowsContext } from '@/lib/flows-context';
@@ -211,6 +211,18 @@ export default function Gallery() {
                       <span>{(template.usageCount / 1000).toFixed(1)}k</span>
                     </div>
                   </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 w-full rounded-full gap-2 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-colors font-semibold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLocation(`/api-access?template=${template.id}`);
+                    }}
+                  >
+                    <KeyRound className="h-3.5 w-3.5" /> Request API key
+                  </Button>
                 </div>
               ))}
             </div>
@@ -301,8 +313,16 @@ export default function Gallery() {
             </div>
 
             <DialogFooter className="p-6 md:p-8 sm:justify-between border-t bg-secondary/10">
-              <Button variant="ghost" onClick={() => setSelectedTemplate(null)} className="rounded-full px-6">
-                Cancel
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const id = selectedTemplate.id;
+                  setSelectedTemplate(null);
+                  setLocation(`/api-access?template=${id}`);
+                }}
+                className="rounded-full px-6 gap-2 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <KeyRound className="h-4 w-4" /> Request API key
               </Button>
               <Button onClick={handleCreateFlow} size="lg" className="rounded-full px-8 font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all gap-2">
                 <Zap className="h-4 w-4" /> Use this template
