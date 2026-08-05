@@ -26,7 +26,7 @@ export function Sidebar() {
       "flex h-full flex-col border-r bg-sidebar transition-all duration-300",
       collapsed ? "w-[68px]" : "w-[240px]"
     )}>
-      <div className={cn("flex items-center gap-2 p-4", collapsed ? "flex-col justify-center px-2 py-4 gap-3" : "md:px-4 md:py-5")}>
+      <div className={cn("flex items-center p-3 transition-all duration-300", collapsed ? "px-3.5 py-4" : "md:py-5")}>
         <Button
           variant="ghost"
           size="icon"
@@ -36,10 +36,15 @@ export function Sidebar() {
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm shrink-0">
-          <Zap className="h-5 w-5" />
+        <div className={cn(
+          "flex items-center gap-2 overflow-hidden transition-all duration-300 ease-in-out",
+          collapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[180px] opacity-100 ml-2"
+        )}>
+          <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm shrink-0">
+            <Zap className="h-5 w-5" />
+          </div>
+          <span className="font-semibold text-[15px] tracking-tight leading-tight whitespace-nowrap">AI Automation Hub</span>
         </div>
-        {!collapsed && <span className="font-semibold text-lg tracking-tight leading-tight">AI Automation Hub</span>}
       </div>
 
       <nav className="flex-1 space-y-1.5 px-3 py-2">
@@ -50,7 +55,7 @@ export function Sidebar() {
               <div
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all cursor-pointer",
+                  "flex items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-300 cursor-pointer",
                   collapsed ? "justify-center px-0" : "px-3",
                   isActive 
                     ? "bg-primary/10 text-primary shadow-sm" 
@@ -58,34 +63,40 @@ export function Sidebar() {
                 )}
               >
                 <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/50")} />
-                {!collapsed && item.label}
+                <span className={cn(
+                  "overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out",
+                  collapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[160px] opacity-100 ml-3"
+                )}>
+                  {item.label}
+                </span>
               </div>
             </Link>
           );
         })}
       </nav>
 
-      <div className={cn("border-t border-sidebar-border/50", collapsed ? "p-2" : "p-4")}>
+      <div className={cn("border-t border-sidebar-border/50 transition-all duration-300", collapsed ? "p-2" : "p-4")}>
         <Link href="/settings">
           <div
             title={collapsed ? 'Settings' : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-lg cursor-pointer hover:bg-sidebar-accent transition-colors",
+              "flex items-center rounded-lg cursor-pointer hover:bg-sidebar-accent transition-all duration-300",
               collapsed ? "justify-center py-2" : "px-3 py-2 -mx-3"
             )}
           >
             <Avatar className="h-8 w-8 border border-border shrink-0">
               <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initials}</AvatarFallback>
             </Avatar>
-            {!collapsed && (
-              <>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{settings.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{settings.email}</div>
-                </div>
-                <SettingsIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-              </>
-            )}
+            <div className={cn(
+              "flex flex-1 items-center gap-3 overflow-hidden transition-all duration-300 ease-in-out min-w-0",
+              collapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[180px] opacity-100 ml-3"
+            )}>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{settings.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{settings.email}</div>
+              </div>
+              <SettingsIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+            </div>
           </div>
         </Link>
       </div>
