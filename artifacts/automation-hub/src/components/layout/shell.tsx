@@ -288,23 +288,32 @@ function CornerAccount() {
   }
 
   return (
-    <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card/95 shadow-md backdrop-blur px-1.5 py-1">
+    <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card/95 shadow-md backdrop-blur pl-1.5 pr-2 py-1">
       <Link href="/settings">
-        <div title="Settings" className="cursor-pointer" data-testid="button-corner-settings">
-          <Avatar className="h-8 w-8 border border-border">
+        <div
+          title="Settings"
+          className="flex items-center gap-2.5 cursor-pointer rounded-full hover:bg-secondary/60 transition-colors pr-2"
+          data-testid="button-corner-settings"
+        >
+          <Avatar className="h-8 w-8 border border-border shrink-0">
             {account.imageUrl && <AvatarImage src={account.imageUrl} alt={account.name} />}
             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{account.initials}</AvatarFallback>
           </Avatar>
+          <div className="min-w-0 max-w-[180px]">
+            <div className="text-sm font-medium leading-tight truncate">{account.name}</div>
+            <div className="text-xs text-muted-foreground leading-tight truncate">{account.email}</div>
+          </div>
         </div>
       </Link>
+      <div className="h-6 w-px bg-border/70" />
       <button
         type="button"
         onClick={() => account.signOut()}
         title="Sign out"
-        className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+        className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
         data-testid="button-corner-sign-out"
       >
-        <LogOut className="h-4 w-4" />
+        <LogOut className="h-4 w-4" /> Sign out
       </button>
     </div>
   );
