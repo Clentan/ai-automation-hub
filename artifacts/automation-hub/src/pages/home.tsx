@@ -131,7 +131,7 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {popular.map((t) => (
-                <Link key={t.id} href="/templates">
+                <Link key={t.id} href={isComingSoon(t) ? '/templates' : `/run/${t.id}`}>
                   <Card className={`h-full cursor-pointer transition-all duration-300 group rounded-2xl bg-card border-border/60 relative ${isComingSoon(t) ? 'opacity-60 grayscale' : 'hover:shadow-md hover:border-primary/30'}`}>
                     {isComingSoon(t) && (
                       <Badge className="absolute -top-2.5 right-4 z-20 rounded-full bg-amber-500 hover:bg-amber-500 text-white border-0 shadow-sm px-3">
