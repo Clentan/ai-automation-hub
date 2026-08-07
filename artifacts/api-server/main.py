@@ -159,7 +159,8 @@ def now_iso() -> str:
 # Clerk configuration
 # --------------------------------------------------------------------------
 
-CLERK_SECRET_KEY = os.environ.get("CLERK_SECRET_KEY", "")
+# The owner's own Clerk application takes priority over the Replit-managed one.
+CLERK_SECRET_KEY = os.environ.get("OWN_CLERK_SECRET_KEY") or os.environ.get("CLERK_SECRET_KEY", "")
 CLERK_API = "https://api.clerk.com"
 
 _jwks_cache: dict = {"keys": None, "fetched_at": 0.0}

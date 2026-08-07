@@ -23,8 +23,10 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
-const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+// The owner's own Clerk application takes priority over the Replit-managed one.
+const ownClerkKey = process.env.EXPO_PUBLIC_OWN_CLERK_PUBLISHABLE_KEY;
+const publishableKey = ownClerkKey || process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const proxyUrl = ownClerkKey ? undefined : process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
 function AuthTokenBridge() {
   const { getToken, isSignedIn } = useAuth();

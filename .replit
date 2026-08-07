@@ -26,6 +26,8 @@ packages = ["postgresql"]
 [userenv]
 
 [userenv.shared]
+EXPO_PUBLIC_OWN_CLERK_PUBLISHABLE_KEY = "pk_test_ZGl2ZXJzZS1pZ3VhbmEtNTIuY2xlcmsuYWNjb3VudHMuZGV2JA"
+VITE_OWN_CLERK_PUBLISHABLE_KEY = "pk_test_ZGl2ZXJzZS1pZ3VhbmEtNTIuY2xlcmsuYWNjb3VudHMuZGV2JA"
 
 [userenv.development]
 N8N_WEBHOOK_URL_OVERRIDE = "http://129.121.121.76/webhook/9adc2285-71f3-41c5-89e7-7b0a2a7cb3d8"

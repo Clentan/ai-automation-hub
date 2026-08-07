@@ -27,10 +27,16 @@ import { WorkspaceChooser } from '@/components/workspace-chooser';
 
 const queryClient = new QueryClient();
 
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
+// When the owner's own Clerk application is configured, it takes priority
+// over the Replit-managed Clerk instance (and needs no frontend-API proxy).
+const ownClerkKey = import.meta.env.VITE_OWN_CLERK_PUBLISHABLE_KEY as string | undefined;
+
+const clerkPubKey =
+  ownClerkKey ||
+  publishableKeyFromHost(
+    window.location.hostname,
+    import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+  );
 function Router() {
   return (
     <Switch>
@@ -144,7 +150,7 @@ function ClerkSessionSync() {
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const clerkProxyUrl = ownClerkKey ? undefined : import.meta.env.VITE_CLERK_PROXY_URL;
 
 const clerkAppearance = {
   theme: shadcn,
