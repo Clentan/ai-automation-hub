@@ -14,6 +14,8 @@ import {
   Clock,
   ShieldCheck,
   Sparkles,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useUser } from '@clerk/react';
 import { useFlowsContext } from '@/lib/flows-context';
@@ -66,6 +68,14 @@ function ResultSummary({ result }: { result: unknown }) {
   const r = result as Record<string, unknown> | null;
   const pages = r && typeof r.numpages === 'number' ? r.numpages : null;
   const text = r && typeof r.text === 'string' ? (r.text as string).trim() : null;
+  const [copied, setCopied] = useState(false);
+
+  const copyText = async () => {
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div className="space-y-4">
@@ -77,7 +87,21 @@ function ResultSummary({ result }: { result: unknown }) {
       )}
       {text !== null && (
         <div>
-          <p className="text-sm font-semibold text-foreground mb-1.5">Extracted text</p>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-sm font-semibold text-foreground">Extracted text</p>
+            {text ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyText}
+                className="gap-1.5 rounded-full h-8"
+                data-testid="button-copy-text"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? 'Copied!' : 'Copy'}
+              </Button>
+            ) : null}
+          </div>
           {text ? (
             <pre className="text-sm bg-secondary/40 rounded-xl p-4 whitespace-pre-wrap break-words max-h-96 overflow-auto">
               {text}
