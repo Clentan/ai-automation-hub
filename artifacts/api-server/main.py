@@ -527,6 +527,85 @@ def admin_stats(request: Request):
     }
 
 
+@app.get("/api/admin/users")
+def admin_users(request: Request):
+    """Signed-up accounts (from Clerk) merged with each user's keys and run counts."""
+    require_admin(request)
+    clerk_users = []
+    if not CLERK_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="User directory unavailable (Clerk not configured)")
+    try:
+        offset = 0
+        while True:
+            resp = httpx.get(
+                f"{CLERK_API}/v1/users?limit=100&offset={offset}&order_by=-created_at",
+                headers={"Authorization": f"Bearer {CLERK_SECRET_KEY}"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            page = resp.json()
+            clerk_users.extend(page)
+            if len(page) < 100 or len(clerk_users) >= 10000:
+                break
+            offset += 100
+    except (httpx.HTTPError, ValueError):
+        # Don't present a partial/empty list as truth — surface the failure.
+        raise HTTPException(status_code=502, detail="Could not load users from the sign-in service. Try again shortly.")
+
+    with db() as conn:
+        key_rows = conn.execute(
+            "SELECT user_id, template_id, key_prefix, created_at FROM user_api_keys ORDER BY created_at DESC"
+        ).fetchall()
+        run_counts = {
+            r["client_id"]: r["c"]
+            for r in conn.execute("SELECT client_id, COUNT(*) AS c FROM runs GROUP BY client_id").fetchall()
+        }
+
+    keys_by_user: dict = {}
+    for r in key_rows:
+        keys_by_user.setdefault(r["user_id"], []).append(
+            {"templateId": r["template_id"], "keyPrefix": r["key_prefix"], "createdAt": r["created_at"]}
+        )
+
+    users = []
+    seen = set()
+    for u in clerk_users:
+        uid = u.get("id")
+        seen.add(uid)
+        emails = {e["id"]: e.get("email_address") for e in u.get("email_addresses", [])}
+        users.append({
+            "id": uid,
+            "email": emails.get(u.get("primary_email_address_id")) or next(iter(emails.values()), None),
+            "name": " ".join(p for p in [u.get("first_name"), u.get("last_name")] if p) or None,
+            "createdAt": u.get("created_at"),
+            "lastSignInAt": u.get("last_sign_in_at"),
+            "keys": keys_by_user.get(uid, []),
+            "runsTotal": run_counts.get(uid, 0),
+        })
+    # Users with keys/runs that no longer exist in Clerk (deleted accounts).
+    for uid, keys in keys_by_user.items():
+        if uid not in seen:
+            users.append({
+                "id": uid, "email": None, "name": None, "createdAt": None,
+                "lastSignInAt": None, "keys": keys, "runsTotal": run_counts.get(uid, 0),
+            })
+    return users
+
+
+@app.delete("/api/admin/users/{user_id}/keys/{template_id}")
+def admin_revoke_key(user_id: str, template_id: str, request: Request):
+    """Owner revokes a user's key for one template."""
+    require_admin(request)
+    with db() as conn:
+        cur = conn.execute(
+            "DELETE FROM user_api_keys WHERE user_id = %s AND template_id = %s",
+            (user_id, template_id),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Key not found")
+    return {"ok": True}
+
+
 @app.get("/api/admin/keys")
 def admin_keys(request: Request):
     require_admin(request)

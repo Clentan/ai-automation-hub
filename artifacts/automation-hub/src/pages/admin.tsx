@@ -17,6 +17,7 @@ import {
 import { OverviewPanel } from '@/components/admin/overview-panel';
 import { RequestsPanel } from '@/components/admin/requests-panel';
 import { KeysPanel } from '@/components/admin/keys-panel';
+import { UsersPanel } from '@/components/admin/users-panel';
 
 export default function Admin({ initialTab = 'overview' }: { initialTab?: string }) {
   const { toast } = useToast();
@@ -179,11 +180,15 @@ export default function Admin({ initialTab = 'overview' }: { initialTab?: string
       <Tabs defaultValue={initialTab}>
         <TabsList className="rounded-full">
           <TabsTrigger value="overview" className="rounded-full">Overview</TabsTrigger>
+          <TabsTrigger value="users" className="rounded-full">Users</TabsTrigger>
           <TabsTrigger value="requests" className="rounded-full">Requests</TabsTrigger>
           <TabsTrigger value="keys" className="rounded-full">API keys</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-6">
           <OverviewPanel token={token} onAuthError={handleAuthError} />
+        </TabsContent>
+        <TabsContent value="users" className="mt-6">
+          <UsersPanel token={token} onAuthError={handleAuthError} />
         </TabsContent>
         <TabsContent value="requests" className="mt-6">
           <RequestsPanel token={token} onAuthError={handleAuthError} />

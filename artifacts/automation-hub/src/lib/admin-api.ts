@@ -61,6 +61,16 @@ export interface AdminStats {
   recentRuns: { id: string; template_id: string; client_id: string; status: string; created_at: string }[];
 }
 
+export interface AdminUserRow {
+  id: string;
+  email: string | null;
+  name: string | null;
+  createdAt: string | number | null;
+  lastSignInAt: string | number | null;
+  keys: { templateId: string; keyPrefix: string; createdAt: string }[];
+  runsTotal: number;
+}
+
 export interface AdminKeyRow {
   clientId: string;
   templateId: string;

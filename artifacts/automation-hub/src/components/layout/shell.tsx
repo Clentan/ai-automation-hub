@@ -253,9 +253,59 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className={cn("border-t border-sidebar-border/50 transition-all duration-300", collapsed ? "p-2" : "p-4")}>
-        <AccountFooter collapsed={collapsed} />
-      </div>
+      {/* When collapsed, the account block moves to the top-right corner of
+          the screen (rendered below); keep the sidebar footer for the
+          expanded state only. */}
+      {!collapsed && (
+        <div className="border-t border-sidebar-border/50 p-4 transition-all duration-300">
+          <AccountFooter />
+        </div>
+      )}
+
+      {collapsed && (
+        <div className="hidden md:block fixed top-3 right-4 z-40">
+          <CornerAccount />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Compact account control shown in the top-right corner when the sidebar is collapsed. */
+function CornerAccount() {
+  const account = useAccount();
+
+  if (!account.isLoaded) return null;
+
+  if (!account.signedIn) {
+    return (
+      <Link href="/sign-in">
+        <Button className="gap-2 rounded-full shadow-md" size="sm" data-testid="button-corner-sign-in">
+          <LogIn className="h-4 w-4" /> Sign in
+        </Button>
+      </Link>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card/95 shadow-md backdrop-blur px-1.5 py-1">
+      <Link href="/settings">
+        <div title="Settings" className="cursor-pointer" data-testid="button-corner-settings">
+          <Avatar className="h-8 w-8 border border-border">
+            {account.imageUrl && <AvatarImage src={account.imageUrl} alt={account.name} />}
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{account.initials}</AvatarFallback>
+          </Avatar>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={() => account.signOut()}
+        title="Sign out"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+        data-testid="button-corner-sign-out"
+      >
+        <LogOut className="h-4 w-4" />
+      </button>
     </div>
   );
 }
