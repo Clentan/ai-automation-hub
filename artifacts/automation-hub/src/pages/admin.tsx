@@ -78,15 +78,18 @@ export default function Admin({ initialTab = 'overview' }: { initialTab?: string
 
   if (probing) {
     return (
-      <div className="max-w-md mx-auto py-16 px-4 text-center text-muted-foreground">
-        Checking access…
+      <div className="flex-1 overflow-y-auto w-full">
+        <div className="max-w-md mx-auto py-16 px-4 text-center text-muted-foreground">
+          Checking access…
+        </div>
       </div>
     );
   }
 
   if (!unlocked) {
     return (
-      <div className="max-w-md mx-auto py-16 px-4 space-y-4">
+      <div className="flex-1 overflow-y-auto w-full">
+    <div className="max-w-md mx-auto py-16 px-4 space-y-4">
         <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -144,11 +147,13 @@ export default function Admin({ initialTab = 'overview' }: { initialTab?: string
             </Button>
           </CardContent>
         </Card>
+    </div>
       </div>
     );
   }
 
   return (
+    <div className="flex-1 overflow-y-auto w-full">
     <div className="max-w-5xl mx-auto py-10 px-4 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -187,6 +192,7 @@ export default function Admin({ initialTab = 'overview' }: { initialTab?: string
           <KeysPanel token={token} onAuthError={handleAuthError} />
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }

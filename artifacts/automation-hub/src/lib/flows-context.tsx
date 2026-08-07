@@ -6,6 +6,7 @@ interface FlowsContextType {
   activity: ActivityLog[];
   isLoaded: boolean;
   createFlow: (templateId: string) => Flow | null;
+  recordRun: (templateId: string, status: 'success' | 'failed', durationMs: number) => void;
   toggleFlow: (id: string) => void;
   renameFlow: (id: string, newName: string) => void;
   deleteFlow: (id: string) => void;

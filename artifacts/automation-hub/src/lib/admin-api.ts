@@ -38,7 +38,7 @@ export async function adminFetch<T>(
   return res.json() as Promise<T>;
 }
 
-const ADMIN_PROBE_STORAGE = 'ai-automation-hub-is-admin';
+const ADMIN_PROBE_STORAGE = 'ai-automation-hub-is-admin-v2';
 export interface TemplateRequest {
   id: string;
   title: string;

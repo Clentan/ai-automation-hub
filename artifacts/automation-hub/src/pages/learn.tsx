@@ -16,6 +16,8 @@ import {
   BellRing,
   Settings,
 } from 'lucide-react';
+import { Upload, ListChecks, ArrowLeftRight } from 'lucide-react';
+import { useUiMode } from '@/lib/ui-mode';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -151,6 +153,132 @@ const FAQS = [
   },
 ];
 
+/* ------- Simple mode ("I just want results") content ------- */
+
+const SIMPLE_GUIDES = [
+  {
+    icon: Rocket,
+    title: 'Getting started',
+    tag: 'Beginner',
+    content:
+      'Open the Run page from the sidebar and you\'ll see every automation available to you. Each card explains in plain words what the automation does. Press "Run now" on the one you need — no setup, no technical knowledge required.',
+  },
+  {
+    icon: Upload,
+    title: 'Adding your file',
+    tag: 'Essential',
+    content:
+      'Most automations work on a file you provide (for example a PDF). On the automation\'s page, drag your file into the upload box or click it to browse. You\'ll see the file name appear when it\'s ready — then just press "Run automation".',
+  },
+  {
+    icon: ListChecks,
+    title: 'Reading your results',
+    tag: 'Beginner',
+    content:
+      'While the automation runs you\'ll see a progress screen. When it finishes, your results appear right on the same page in a clear summary. You can run another file straight away, or find this run later in your history.',
+  },
+  {
+    icon: PlayCircle,
+    title: 'Your flows',
+    tag: 'Guide',
+    content:
+      '"My flows" lists the automations you use. You can switch them on or off, rename them, or remove ones you no longer need. Everything you do is saved to your account, so it\'s there on any device you sign in from.',
+  },
+];
+
+const SIMPLE_SECTIONS = [
+  {
+    icon: Home,
+    title: 'Home',
+    description:
+      'Your dashboard. A quick overview of your automations and your latest activity at a glance.',
+  },
+  {
+    icon: PlayCircle,
+    title: 'Run',
+    description:
+      'The heart of the app for you. Browse the available automations, pick one, add your file, and get results in minutes.',
+  },
+  {
+    icon: CheckSquare,
+    title: 'My flows',
+    description:
+      'The automations you use, in one list. Turn them on or off, rename them, or remove them when you no longer need them.',
+  },
+  {
+    icon: Settings,
+    title: 'Settings',
+    description:
+      'Open it with the gear icon next to your profile at the bottom of the sidebar. Update your name and email, switch between light and dark theme, and manage notifications.',
+  },
+  {
+    icon: ArrowLeftRight,
+    title: 'Switch mode',
+    description:
+      'Takes you back to the start screen where you can switch to the developer workspace — useful if you ever want API access and advanced tools. You can switch back at any time.',
+  },
+];
+
+const SIMPLE_STEPS = [
+  {
+    icon: LayoutGrid,
+    title: '1. Pick an automation',
+    description:
+      'Open the Run page and choose the automation that matches what you need. Every card describes what it does in plain language.',
+  },
+  {
+    icon: Upload,
+    title: '2. Add your file',
+    description:
+      'Drop your file into the upload box on the automation\'s page. That\'s the only input you need to provide.',
+  },
+  {
+    icon: Send,
+    title: '3. Press Run',
+    description:
+      'Hit "Run automation" and relax. A progress screen keeps you posted while the work happens.',
+  },
+  {
+    icon: Server,
+    title: '4. We do the heavy lifting',
+    description:
+      'The automation runs securely on our servers — reading your file, processing it step by step, exactly as described on its card.',
+  },
+  {
+    icon: BellRing,
+    title: '5. Get your results',
+    description:
+      'The results appear right on the page in a clear summary the moment the run finishes. Run another file whenever you like.',
+  },
+];
+
+const SIMPLE_FAQS = [
+  {
+    q: 'What is AI Automation Hub?',
+    a: 'A collection of ready-made automations that do work for you — like reading and extracting information from documents. You pick one, add your file, press Run, and get results. No technical knowledge needed.',
+  },
+  {
+    q: 'Do I need to be technical to use it?',
+    a: 'Not at all. If you can attach a file to an email, you can use this app. Everything happens through simple pages — no code, no setup.',
+  },
+  {
+    q: 'What files can I upload?',
+    a: 'Each automation says what it accepts on its own page — most work with PDF documents. If a file isn\'t suitable you\'ll get a clear message before anything runs.',
+  },
+  {
+    q: 'Is my file safe?',
+    a: 'Your file is used only to run the automation you chose, and every run happens over a secure connection on our infrastructure.',
+  },
+  {
+    q: 'How much does it cost?',
+    a: 'Nothing right now — everyone is on the Free plan during early access. Paid plans are coming later.',
+  },
+  {
+    q: 'What is the developer mode I saw at the start?',
+    a: 'A separate workspace for people who want to connect automations to their own apps using API keys. You don\'t need it — but you can always reach it with "Switch mode" in the sidebar.',
+  },
+];
+
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -162,15 +290,21 @@ const item = {
 };
 
 export default function Learn() {
+  const mode = useUiMode();
+  const simple = mode === 'simple';
+  const guides = simple ? SIMPLE_GUIDES : GUIDES;
+  const sections = simple ? SIMPLE_SECTIONS : APP_SECTIONS;
+  const steps = simple ? SIMPLE_STEPS : PIPELINE_STEPS;
+  const faqs = simple ? SIMPLE_FAQS : FAQS;
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
-      <div className="border-b border-border/60 bg-background sticky top-0 z-10 px-6 py-8 md:py-10">
-        <div className="max-w-4xl mx-auto w-full flex items-start gap-4">
+      <div className="bg-background sticky top-0 z-10 px-6 py-5 [@media(min-height:820px)]:py-8 md:[@media(min-height:820px)]:py-10">
+        <div className="max-w-7xl 2xl:max-w-[1500px] mx-auto w-full flex items-start gap-4">
           <div className="bg-primary/10 text-primary p-3 rounded-2xl shrink-0">
             <BookOpen className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2 text-foreground">Documentation</h1>
+            <h1 className="text-2xl md:text-3xl [@media(min-height:820px)]:md:text-4xl font-bold tracking-tight mb-2 text-foreground">Documentation</h1>
             <p className="text-muted-foreground text-lg">Everything you need to get the most out of AI Automation Hub.</p>
           </div>
         </div>
@@ -181,14 +315,14 @@ export default function Learn() {
           variants={container}
           initial="hidden"
           animate="show"
-          className="p-6 md:p-8 max-w-4xl mx-auto w-full space-y-12 pb-20"
+          className="p-6 md:p-8 max-w-7xl 2xl:max-w-[1500px] mx-auto w-full space-y-12 pb-10 [@media(min-height:820px)]:pb-20"
         >
           {/* Guides */}
           <motion.div variants={item} className="space-y-5">
             <h2 className="text-2xl font-bold tracking-tight text-foreground">Quick Guides</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {GUIDES.map((guide) => (
-                <Card key={guide.title} className="h-full bg-card border-border/60">
+              {guides.map((guide) => (
+                <Card key={guide.title} className="h-full bg-card border-transparent shadow-sm">
                   <CardContent className="p-6 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="bg-primary/10 text-primary p-2.5 rounded-xl">
@@ -211,12 +345,14 @@ export default function Learn() {
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-foreground">App Concepts</h2>
               <p className="text-muted-foreground text-base mt-1 max-w-2xl font-medium">
-                AI Automation Hub is where ready-made n8n automations are published. Here is what each part of the app does:
+                {simple
+                  ? 'Here is what each part of your workspace does:'
+                  : 'AI Automation Hub is where ready-made n8n automations are published. Here is what each part of the app does:'}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-4">
-              {APP_SECTIONS.map((section) => (
-                <Card key={section.title} className="bg-card border-border/60">
+              {sections.map((section) => (
+                <Card key={section.title} className="bg-card border-transparent shadow-sm">
                   <CardContent className="p-5 flex items-start gap-5">
                     <div className="bg-primary/10 text-primary p-3 rounded-xl shrink-0">
                       <section.icon className="h-6 w-6" />
@@ -235,18 +371,20 @@ export default function Learn() {
           <motion.div variants={item} className="space-y-5">
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-                <Workflow className="h-6 w-6 text-primary" /> How the pipeline works
+                <Workflow className="h-6 w-6 text-primary" /> {simple ? 'How it works' : 'How the pipeline works'}
               </h2>
               <p className="text-muted-foreground text-base mt-1 font-medium">
-                From choosing a template to getting results — this is the full journey of an automation.
+                {simple
+                  ? 'From picking an automation to getting your results — the whole journey in five simple steps.'
+                  : 'From choosing a template to getting results — this is the full journey of an automation.'}
               </p>
             </div>
             <Card className="bg-card border-border/60 shadow-sm overflow-hidden">
               <CardContent className="p-8 md:p-10">
                 <div className="space-y-0">
-                  {PIPELINE_STEPS.map((step, index) => (
+                  {steps.map((step, index) => (
                     <div key={step.title} className="flex gap-6 relative pb-10 last:pb-0">
-                      {index !== PIPELINE_STEPS.length - 1 && (
+                      {index !== steps.length - 1 && (
                         <div className="absolute left-6 top-14 bottom-[-8px] w-px bg-border/80" />
                       )}
                       <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 z-10 border border-primary/20 shadow-sm">
@@ -271,8 +409,8 @@ export default function Learn() {
             <Card className="bg-card border-border/60 shadow-sm">
               <CardContent className="px-6 py-2">
                 <Accordion type="single" collapsible className="w-full">
-                  {FAQS.map((faq, i) => (
-                    <AccordionItem key={i} value={`faq-${i}`} className={i === FAQS.length - 1 ? 'border-b-0' : 'border-border/50'}>
+                  {faqs.map((faq, i) => (
+                    <AccordionItem key={i} value={`faq-${i}`} className={i === faqs.length - 1 ? 'border-b-0' : 'border-border/50'}>
                       <AccordionTrigger className="text-left text-[15px] font-bold text-foreground hover:text-primary transition-colors py-5">
                         {faq.q}
                       </AccordionTrigger>

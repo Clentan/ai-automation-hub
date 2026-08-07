@@ -123,6 +123,68 @@ export function useFlows() {
     return newFlow;
   }, []);
 
+  /**
+   * Record a real template run (from the Run pages) so Home stats,
+   * My flows counters, and the Activity log all stay in sync.
+   * Creates a flow for the template automatically if the user doesn't have one yet.
+   */
+  const recordRun = useCallback(
+    (templateId: string, status: 'success' | 'failed', durationMs: number) => {
+      const now = new Date().toISOString();
+      setFlows((prev) => {
+        const existing = prev.find((f) => f.templateId === templateId);
+        if (existing) {
+          const updated = prev.map((f) =>
+            f.templateId === templateId
+              ? { ...f, runCount: f.runCount + (status === 'success' ? 1 : 0), lastRun: now }
+              : f
+          );
+          setActivity((a) =>
+            [
+              {
+                id: `a-${generateId()}`,
+                flowId: existing.id,
+                flowName: existing.name,
+                status,
+                timestamp: now,
+                durationMs,
+              },
+              ...a,
+            ].slice(0, 100)
+          );
+          return updated;
+        }
+        const template = MOCK_TEMPLATES.find((t) => t.id === templateId);
+        if (!template) return prev;
+        const newFlow: Flow = {
+          id: `f-${generateId()}`,
+          templateId,
+          name: `My ${template.name}`,
+          status: 'on',
+          runCount: status === 'success' ? 1 : 0,
+          lastRun: now,
+          createdAt: now,
+          template,
+        };
+        setActivity((a) =>
+          [
+            {
+              id: `a-${generateId()}`,
+              flowId: newFlow.id,
+              flowName: newFlow.name,
+              status,
+              timestamp: now,
+              durationMs,
+            },
+            ...a,
+          ].slice(0, 100)
+        );
+        return [newFlow, ...prev];
+      });
+    },
+    []
+  );
+
   const toggleFlow = useCallback((id: string) => {
     setFlows((prev) =>
       prev.map((f) => (f.id === id ? { ...f, status: f.status === 'on' ? 'off' : 'on' } : f))
@@ -144,6 +206,7 @@ export function useFlows() {
     activity,
     isLoaded,
     createFlow,
+    recordRun,
     toggleFlow,
     renameFlow,
     deleteFlow

@@ -7,6 +7,9 @@ The shared api-server is Python/FastAPI, so the Clerk Express/JS templates don't
 
 **Why:** Replit-managed Clerk assumes an Express server; this project's backend is FastAPI, so the canonical middleware/proxy had to be re-implemented rather than imported.
 
-Admin access is email-based: `require_admin` accepts either a signed-in Clerk session whose primary email is in the `ADMIN_EMAILS` env var (comma-separated, lowercased) or the legacy `ADMIN_TOKEN` bearer. Admin endpoints return 404 (not 401/403) on denial to avoid revealing their existence.
-
-**How to apply:** Keep proxied responses fully buffered (Content-Length set) — the deploy edge rejects chunked responses. The proxy returning 404 in development is intentional, not a bug. Template API keys are account-bound and stored hashed with reveal-once plaintext; a second issue for the same template must return 409 and the client regenerates instead. When minting test session JWTs, `POST /v1/sessions/{id}/tokens` requires `Content-Type: application/json` and a body (`{}`) or Clerk rejects it with unsupported_content_type.
+**How to apply:**
+- Keep proxied responses fully buffered (Content-Length set) — the deploy edge rejects chunked responses.
+- The proxy returning 404 in development is intentional, not a bug.
+- Template API keys are account-bound, stored hashed, with reveal-once plaintext; a second issue for the same template returns 409 and the client regenerates instead.
+- Admin access is email-based: `require_admin` accepts either a signed-in Clerk session whose primary email is in the `ADMIN_EMAILS` env var (comma-separated, lowercased) or a legacy `ADMIN_TOKEN` bearer. Admin endpoints return 404 on denial to avoid revealing their existence.
+- When minting test session JWTs via the Clerk Backend API, `POST /v1/sessions/{id}/tokens` requires `Content-Type: application/json` with a body of `{}` — omitting it returns `unsupported_content_type`.

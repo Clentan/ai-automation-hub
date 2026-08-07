@@ -8,6 +8,9 @@ import { ThemeProvider } from '@/components/theme-provider';
 import Home from '@/pages/home';
 import Gallery from '@/pages/gallery';
 import MyFlows from '@/pages/my-flows';
+import RunPage from '@/pages/run';
+import RunLanding from '@/pages/run-landing';
+import RunDetail from '@/pages/run-detail';
 import ActivityLog from '@/pages/activity';
 import ApiAccess from '@/pages/api-access';
 import Learn from '@/pages/learn';
@@ -35,11 +38,16 @@ function Router() {
           Clerk's OAuth sub-paths (e.g. /sign-in/sso-callback). */}
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
+      {/* Full-screen chooser — the site landing page, rendered outside the Shell (no sidebar). */}
+      <Route path="/" component={RunLanding} />
+      <Route path="/run" component={RunLanding} />
       <Route>
         <Shell>
           <Switch>
-            <Route path="/" component={Home} />
+            <Route path="/home" component={Home} />
             <Route path="/templates" component={Gallery} />
+            <Route path="/run/all" component={RunPage} />
+            <Route path="/run/:templateId" component={RunDetail} />
             <Route path="/my-flows" component={MyFlows} />
             <Route path="/activity" component={ActivityLog} />
             <Route path="/api-access" component={ApiAccess} />

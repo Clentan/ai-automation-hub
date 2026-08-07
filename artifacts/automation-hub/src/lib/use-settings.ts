@@ -1,57 +1,132 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { useUser } from '@clerk/react';
 
 export interface UserSettings {
   notifications: boolean;
 }
 
-const SETTINGS_KEY = 'ai-automation-hub-settings';
+const API_BASE = `${import.meta.env.BASE_URL}api`;
 
-const defaultSettings: UserSettings = {
-  notifications: true,
+interface SettingsState {
+  /** The user ID whose preferences are currently loaded. null = no user loaded. */
+  forUserId: string | null;
+  settings: UserSettings;
+  isLoaded: boolean;
+  unauthorized: boolean;
+}
+
+// Email digests are opt-in server-side; mirror that default here.
+const defaultSettings: UserSettings = { notifications: false };
+
+const initialState: SettingsState = {
+  forUserId: null,
+  settings: defaultSettings,
+  isLoaded: false,
+  unauthorized: false,
 };
 
-function sanitize(raw: unknown): UserSettings {
-  const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  return {
-    notifications:
-      typeof obj.notifications === 'boolean' ? obj.notifications : defaultSettings.notifications,
-  };
-}
-
-function load(): UserSettings {
-  try {
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) return sanitize(JSON.parse(stored));
-  } catch (e) {
-    console.error('Failed to parse settings', e);
-  }
-  return defaultSettings;
-}
-
-// Module-level store shared by every component that calls useSettings.
-let current: UserSettings = typeof window !== 'undefined' ? load() : defaultSettings;
+let state: SettingsState = { ...initialState };
 const listeners = new Set<() => void>();
+
+function setState(next: Partial<SettingsState>) {
+  state = { ...state, ...next };
+  listeners.forEach((l) => l());
+}
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
-function getSnapshot() {
-  return current;
+const getSnapshot = () => state;
+const getServerSnapshot = () => ({ ...initialState });
+
+/** Clears the store and (re)fetches for the given user. Pass null to reset to signed-out state. */
+export function resetSettingsForUser(userId: string | null): void {
+  if (!userId) {
+    setState({ ...initialState, isLoaded: true });
+    return;
+  }
+  // Immediately mark as loading for the new user so stale values aren't shown.
+  setState({ forUserId: userId, settings: defaultSettings, isLoaded: false, unauthorized: false });
+  void fetchSettings(userId);
 }
 
-export function updateSettingsStore(updates: Partial<UserSettings>) {
-  current = sanitize({ ...current, ...updates });
+async function fetchSettings(userId: string): Promise<void> {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(current));
+    const res = await fetch(`${API_BASE}/settings`, { credentials: 'same-origin' });
+    // Guard: another identity change may have fired while we were in flight.
+    if (state.forUserId !== userId) return;
+    if (res.status === 401) {
+      setState({ settings: defaultSettings, isLoaded: true, unauthorized: true });
+      return;
+    }
+    if (!res.ok) throw new Error(`Failed to load settings (${res.status})`);
+    const data = await res.json();
+    if (state.forUserId !== userId) return;
+    setState({
+      settings: { notifications: Boolean(data.emailNotifications) },
+      isLoaded: true,
+      unauthorized: false,
+    });
   } catch (e) {
-    console.error('Failed to persist settings', e);
+    console.error('Failed to load settings', e);
+    if (state.forUserId === userId) {
+      setState({ isLoaded: true });
+    }
   }
-  listeners.forEach((l) => l());
+}
+
+/**
+ * Persists the preference to the user's account. Throws on failure so the
+ * caller can surface the error; the optimistic update is reverted on failure.
+ */
+export async function updateSettingsStore(updates: Partial<UserSettings>): Promise<void> {
+  const previous = state.settings;
+  const next = { ...previous, ...updates };
+  setState({ settings: next });
+  try {
+    const res = await fetch(`${API_BASE}/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ emailNotifications: next.notifications }),
+    });
+    if (res.status === 401) {
+      setState({ settings: previous, unauthorized: true });
+      throw new Error('Sign in to change email notifications.');
+    }
+    if (!res.ok) throw new Error(`Failed to save settings (${res.status})`);
+    const data = await res.json();
+    setState({
+      settings: { notifications: Boolean(data.emailNotifications) },
+      unauthorized: false,
+    });
+  } catch (e) {
+    setState({ settings: previous });
+    throw e;
+  }
 }
 
 export function useSettings() {
-  const settings = useSyncExternalStore(subscribe, getSnapshot, () => defaultSettings);
-  return { settings, updateSettings: updateSettingsStore, isLoaded: true };
+  const { user, isLoaded: clerkLoaded } = useUser();
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  useEffect(() => {
+    if (!clerkLoaded) return;
+
+    const userId = user?.id ?? null;
+
+    // Only (re)fetch when the identity changes.
+    if (snapshot.forUserId !== userId) {
+      resetSettingsForUser(userId);
+    }
+  }, [clerkLoaded, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return {
+    settings: snapshot.settings,
+    isLoaded: snapshot.isLoaded,
+    unauthorized: snapshot.unauthorized,
+    updateSettings: updateSettingsStore,
+  };
 }

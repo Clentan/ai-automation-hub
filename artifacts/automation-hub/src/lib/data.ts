@@ -47,7 +47,7 @@ export const MOCK_TEMPLATES: Template[] = [
   {
     id: 't-21',
     name: 'QCR Scan — extract data from uploaded PDFs',
-    description: 'Send a PDF to a secure webhook and instantly get its extracted data back — no model required.',
+    description: 'POST a PDF to the template API and instantly get its extracted data back — no model required.',
     author: 'AI Automation Hub',
     type: 'Instant',
     categories: ['Top picks', 'Data collection'],
@@ -57,12 +57,13 @@ export const MOCK_TEMPLATES: Template[] = [
     available: true,
     documentation:
       'QCR Scan turns any PDF into structured data in a single request — no AI model or training needed.\n\n' +
-      'How it works: your website or app sends a PDF file to this template\'s secure webhook (a POST request with your API key). ' +
-      'The automation checks the upload is a valid file, extracts all the text and data from the PDF, and sends the result straight back in the response — usually within seconds.\n\n' +
+      'How it works: your website or app POSTs a PDF file to this template\'s run endpoint on our API, authenticated with your API key. ' +
+      'The service validates the upload, extracts all the text and data from the PDF, and sends the result straight back in the response — usually within seconds. ' +
+      'Everything runs through the hub\'s API; you never deal with the automation backend directly.\n\n' +
       'Use it for: scanning invoices, receipts, forms, contracts, or any document workflow where you need the contents of a PDF as usable data.\n\n' +
-      'To connect: request an API key for this template, then POST your PDF to the run endpoint shown on the API access page, using the key in the X-API-Key header.',
+      'To connect: request an API key for this template, then POST your PDF to the run endpoint shown on the API access page, using the key as a Bearer token in the Authorization header.',
     steps: [
-      { title: 'Webhook receives your file', description: 'POST a PDF from your website or app', serviceId: 'webhook' },
+      { title: 'API receives your file', description: 'POST a PDF to the run endpoint with your API key', serviceId: 'webhook' },
       { title: 'Check the upload', description: 'Validates the incoming file', serviceId: 'webhook' },
       { title: 'Extract from PDF', description: 'Pulls the text and data out of the document', serviceId: 'pdf' },
       { title: 'Respond instantly', description: 'Returns the extracted data to your app', serviceId: 'webhook' }

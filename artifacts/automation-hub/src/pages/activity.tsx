@@ -10,20 +10,20 @@ export default function ActivityLog() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
-      <div className="border-b border-border/60 bg-background sticky top-0 z-10 px-6 py-8 md:py-10">
-        <div className="max-w-4xl mx-auto w-full flex items-start gap-4">
+      <div className="bg-background sticky top-0 z-10 px-6 py-5 [@media(min-height:820px)]:py-8 md:[@media(min-height:820px)]:py-10">
+        <div className="max-w-7xl 2xl:max-w-[1500px] mx-auto w-full flex items-start gap-4">
           <div className="bg-primary/10 text-primary p-3 rounded-2xl shrink-0">
             <Activity className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2 text-foreground">Run Activity</h1>
+            <h1 className="text-2xl md:text-3xl [@media(min-height:820px)]:md:text-4xl font-bold tracking-tight mb-2 text-foreground">Run Activity</h1>
             <p className="text-muted-foreground text-lg">Monitor the execution history of your automated flows.</p>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto bg-secondary/10">
-        <div className="p-6 md:p-8 max-w-4xl mx-auto w-full pb-20">
+        <div className="p-6 md:p-8 max-w-7xl 2xl:max-w-[1500px] mx-auto w-full pb-10 [@media(min-height:820px)]:pb-20">
           {activity.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-border/60 rounded-3xl bg-card shadow-sm animate-in fade-in duration-500">
               <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 shadow-inner">

@@ -143,14 +143,14 @@ export default function ApiAccess() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
-      <div className="border-b border-border/60 bg-background sticky top-0 z-10 px-6 py-8 md:py-10">
-        <div className="max-w-4xl mx-auto w-full flex items-start gap-4">
+      <div className="bg-background sticky top-0 z-10 px-6 py-5 [@media(min-height:820px)]:py-8 md:[@media(min-height:820px)]:py-10">
+        <div className="max-w-7xl 2xl:max-w-[1500px] mx-auto w-full flex items-start gap-4">
           <div className="bg-primary/10 text-primary p-3 rounded-2xl shrink-0">
             <KeyRound className="h-7 w-7" />
           </div>
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">API Access</h1>
+              <h1 className="text-2xl md:text-3xl [@media(min-height:820px)]:md:text-4xl font-bold tracking-tight text-foreground">API Access</h1>
               <Badge className="gap-1 bg-primary text-primary-foreground uppercase tracking-wider text-[10px] font-bold"><Sparkles className="h-3 w-3" /> Free plan</Badge>
             </div>
             <p className="text-muted-foreground text-lg">
@@ -167,7 +167,7 @@ export default function ApiAccess() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-6 md:p-8 max-w-4xl mx-auto w-full space-y-8 pb-20"
+          className="p-6 md:p-8 max-w-7xl 2xl:max-w-[1500px] mx-auto w-full space-y-8 pb-10 [@media(min-height:820px)]:pb-20"
         >
           {/* Requested template context */}
           {requestedTemplate && (

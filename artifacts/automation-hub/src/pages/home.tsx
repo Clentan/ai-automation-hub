@@ -48,11 +48,11 @@ export default function Home() {
           variants={container}
           initial="hidden"
           animate="show"
-          className="px-6 py-8 md:px-10 md:py-12 max-w-6xl w-full mx-auto space-y-12"
+          className="px-6 py-6 md:px-10 [@media(min-height:820px)]:py-8 md:[@media(min-height:820px)]:py-12 max-w-7xl 2xl:max-w-[1500px] w-full mx-auto space-y-8 [@media(min-height:820px)]:space-y-12"
         >
           {/* Hero */}
           <motion.section variants={item} className="space-y-5 max-w-3xl">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-tight">
+            <h1 className="text-3xl md:text-4xl [@media(min-height:820px)]:md:text-5xl font-bold tracking-tight text-foreground leading-tight">
               Automate the busywork. <br />
               <span className="text-primary">Focus on the work.</span>
             </h1>
@@ -109,6 +109,11 @@ export default function Home() {
                 <div>
                   <div className="text-3xl font-bold text-foreground">{MOCK_TEMPLATES.length}</div>
                   <div className="text-sm font-medium text-muted-foreground mt-0.5">Templates available</div>
+                  <div className="text-xs font-medium mt-1 flex items-center gap-2">
+                    <span className="text-primary">{MOCK_TEMPLATES.filter((t) => !isComingSoon(t)).length} active</span>
+                    <span className="text-muted-foreground/60">·</span>
+                    <span className="text-muted-foreground">{MOCK_TEMPLATES.filter(isComingSoon).length} coming soon</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>

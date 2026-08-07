@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Search, ChevronDown, Check, Zap, Users, Play, Clock, ArrowRight, KeyRound, Lightbulb } from 'lucide-react';
+import { Search, ChevronDown, Check, Zap, Users, Play, Clock, ArrowRight, KeyRound, Lightbulb, SlidersHorizontal } from 'lucide-react';
 import { MOCK_TEMPLATES, CATEGORIES, isComingSoon, Template } from '@/lib/data';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { useFlowsContext } from '@/lib/flows-context';
@@ -21,7 +21,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { RequestTemplateDialog } from '@/components/request-template-dialog';
@@ -82,24 +81,24 @@ export default function Gallery() {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
       {/* Header Area */}
-      <div className="border-b border-border/60 bg-background sticky top-0 z-10">
-        <div className="p-6 md:py-10 max-w-7xl mx-auto w-full">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+      <div className="bg-background sticky top-0 z-10">
+        <div className="px-6 py-5 [@media(min-height:820px)]:py-8 md:[@media(min-height:820px)]:py-10 max-w-7xl 2xl:max-w-[1600px] mx-auto w-full">
+          <div className="flex flex-col gap-6 mb-8">
             <div className="space-y-2 max-w-2xl">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">Template Gallery</h1>
+              <h1 className="text-2xl md:text-3xl [@media(min-height:820px)]:md:text-4xl font-bold tracking-tight text-foreground">Template Gallery</h1>
               <p className="text-muted-foreground text-lg">
                 Discover and launch proven automations in seconds.
               </p>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto md:items-center">
-              <div className="flex-shrink-0 w-full sm:w-auto relative group">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:items-center">
+              <div className="w-full sm:flex-1 relative group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search templates, apps, or tasks..." 
-                  className="pl-12 h-12 w-full sm:w-[320px] rounded-full bg-secondary/30 border-transparent focus-visible:bg-background focus-visible:border-primary/30 transition-all text-base shadow-sm hover:bg-secondary/50"
+                  className="pl-12 h-12 w-full rounded-full bg-secondary/30 border-transparent focus-visible:bg-background focus-visible:border-primary/30 transition-all text-base shadow-sm hover:bg-secondary/50"
                 />
               </div>
               <RequestTemplateDialog
@@ -112,26 +111,27 @@ export default function Gallery() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <ScrollArea className="w-full whitespace-nowrap pb-3 -mb-3">
-              <div className="flex w-max space-x-1.5 p-1">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shrink-0 h-10 rounded-full border-border bg-background shadow-sm px-4">
+                  <SlidersHorizontal className="mr-2 h-4 w-4 text-muted-foreground" />
+                  Filter: {activeCategory} <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[200px] rounded-xl">
                 {CATEGORIES.map((cat) => (
-                  <button
+                  <DropdownMenuItem
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-                      activeCategory === cat 
-                        ? "bg-primary text-primary-foreground shadow-md" 
-                        : "bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    )}
+                    className="flex items-center justify-between rounded-lg cursor-pointer"
                   >
                     {cat}
-                  </button>
+                    {activeCategory === cat && <Check className="h-4 w-4 text-primary" />}
+                  </DropdownMenuItem>
                 ))}
-              </div>
-              <ScrollBar orientation="horizontal" className="hidden" />
-            </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -158,7 +158,7 @@ export default function Gallery() {
 
       {/* Grid Area */}
       <div className="flex-1 overflow-auto bg-secondary/10 relative">
-        <div className="p-6 max-w-7xl mx-auto w-full pb-20">
+        <div className="p-6 max-w-7xl 2xl:max-w-[1600px] mx-auto w-full pb-10 [@media(min-height:820px)]:pb-20">
           {filteredAndSorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in duration-300">
               <div className="h-20 w-20 bg-card border shadow-sm rounded-3xl flex items-center justify-center mb-6">

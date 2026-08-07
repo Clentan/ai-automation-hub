@@ -26,4 +26,11 @@ packages = ["postgresql"]
 [userenv]
 
 [userenv.shared]
-ADMIN_EMAILS = "clentanchauke9089@gmail.com"
+SUPABASE_DB_URL = "postgresql://postgres.bcgehbowoapsjijwzyaq:Nhlanhla%401023@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
+
+[userenv.development]
+ADMIN_DISABLED = "1"
+N8N_WEBHOOK_URL_OVERRIDE = "http://129.121.121.76/webhook/9adc2285-71f3-41c5-89e7-7b0a2a7cb3d8"
+
+[userenv.production]
+N8N_WEBHOOK_URL_OVERRIDE = "http://129.121.121.76/webhook/9adc2285-71f3-41c5-89e7-7b0a2a7cb3d8"

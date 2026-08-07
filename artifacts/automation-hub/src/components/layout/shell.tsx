@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { LayoutGrid, CheckSquare, Zap, Activity, Home, BookOpen, Menu, Settings as SettingsIcon, LogIn, LogOut, KeyRound, ShieldCheck } from 'lucide-react';
+import { LayoutGrid, CheckSquare, Zap, Activity, Home, BookOpen, Menu, Settings as SettingsIcon, LogIn, LogOut, KeyRound, ShieldCheck, Play, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -7,10 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser, useClerk } from '@clerk/react';
 import { useEffect, useState } from 'react';
 import { probeAdminAccess, clearAdminProbe } from '@/lib/admin-api';
+import { useUiMode } from '@/lib/ui-mode';
+import { BrandLoadingOverlay } from '@/components/brand-loader';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Home', icon: Home },
+  { href: '/home', label: 'Home', icon: Home },
   { href: '/templates', label: 'Templates', icon: LayoutGrid },
+  { href: '/run/all', label: 'Run', icon: Play },
   { href: '/my-flows', label: 'My flows', icon: CheckSquare },
   { href: '/activity', label: 'Activity', icon: Activity },
   { href: '/api-access', label: 'API access', icon: KeyRound },
@@ -46,9 +49,53 @@ export function useIsAdmin(): boolean {
   return isAdmin;
 }
 
+// Nav items hidden depending on the mode chosen on the landing page:
+// simple (non-technical) users don't see developer pages; developers don't see Run.
+const DEV_ONLY_HREFS = new Set(['/templates', '/activity', '/api-access']);
+const SIMPLE_ONLY_HREFS = new Set(['/run/all']);
+
+// Back to the landing page to pick the other side.
+const SWITCH_NAV_ITEM = { href: '/', label: 'Switch mode', icon: ArrowLeftRight };
+
+// Clicking "Switch mode" shows a branded loading transition before the landing page.
+const MODE_SWITCH_EVENT = 'ah-mode-switch';
+function startModeSwitch() {
+  window.dispatchEvent(new Event(MODE_SWITCH_EVENT));
+}
+
+function ModeSwitchOverlay() {
+  const [, setLocation] = useLocation();
+  const [switching, setSwitching] = useState(false);
+
+  useEffect(() => {
+    let timer: number | null = null;
+    const onSwitch = () => {
+      setSwitching(true);
+      timer = window.setTimeout(() => {
+        setSwitching(false);
+        setLocation('/');
+      }, 5000);
+    };
+    window.addEventListener(MODE_SWITCH_EVENT, onSwitch);
+    return () => {
+      window.removeEventListener(MODE_SWITCH_EVENT, onSwitch);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [setLocation]);
+
+  if (!switching) return null;
+  return <BrandLoadingOverlay label="Taking you back to choose…" />;
+}
+
 function useNavItems() {
   const isAdmin = useIsAdmin();
-  return isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
+  const mode = useUiMode();
+  const items =
+    mode === 'simple'
+      ? NAV_ITEMS.filter((i) => !DEV_ONLY_HREFS.has(i.href))
+      : NAV_ITEMS.filter((i) => !SIMPLE_ONLY_HREFS.has(i.href));
+  const withAdmin = isAdmin ? [...items, ADMIN_NAV_ITEM] : items;
+  return [...withAdmin, SWITCH_NAV_ITEM];
 }
 
 function useAccount() {
@@ -173,11 +220,16 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1.5 px-3 py-2">
+      <nav className="flex-1 min-h-0 overflow-y-auto space-y-1.5 px-3 py-2">
         {navItems.map((item) => {
           const isActive = location === item.href;
+          const isSwitch = item.href === SWITCH_NAV_ITEM.href;
           return (
-            <Link key={item.href} href={item.href}>
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={isSwitch ? (e) => { e.preventDefault(); startModeSwitch(); } : undefined}
+            >
               <div
                 title={collapsed ? item.label : undefined}
                 className={cn(
@@ -230,8 +282,13 @@ export function MobileNav() {
         <nav className="flex-1 space-y-1.5 px-3 py-4">
           {navItems.map((item) => {
             const isActive = location === item.href;
+            const isSwitch = item.href === SWITCH_NAV_ITEM.href;
             return (
-              <Link key={item.href} href={item.href}>
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={isSwitch ? (e) => { e.preventDefault(); setOpen(false); startModeSwitch(); } : undefined}
+              >
                 <div
                   onClick={() => setOpen(false)}
                   className={cn(
@@ -274,27 +331,28 @@ function AdminHomeRedirect() {
 
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] w-full flex-col md:flex-row bg-background">
+    <div className="flex h-[100dvh] w-full flex-col md:flex-row overflow-hidden bg-background">
       <AdminHomeRedirect />
+      <ModeSwitchOverlay />
       {/* Desktop Sidebar */}
-      <div className="hidden md:block shrink-0 h-[100dvh] sticky top-0">
+      <div className="hidden md:block shrink-0 h-full">
         <Sidebar />
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Top Header (Visible on Mobile) */}
-        <header className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4">
+        <header className="md:hidden shrink-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4">
           <MobileNav />
-          <div className="flex items-center gap-2">
-            <div className="bg-primary text-primary-foreground p-1 rounded-md">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="bg-primary text-primary-foreground p-1 rounded-md shrink-0">
               <Zap className="h-4 w-4" />
             </div>
-            <span className="font-semibold tracking-tight">AI Automation Hub</span>
+            <span className="font-semibold tracking-tight truncate">AI Automation Hub</span>
           </div>
         </header>
-        
-        <main className="flex-1 flex flex-col">
+
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {children}
         </main>
       </div>

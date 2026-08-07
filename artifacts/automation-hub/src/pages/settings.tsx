@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function Settings() {
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, isLoaded: settingsLoaded, unauthorized: settingsUnauthorized } = useSettings();
   const { user, isLoaded } = useUser();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
@@ -80,6 +80,7 @@ export default function Settings() {
     localStorage.removeItem('ai-automation-hub-template-keys');
     localStorage.removeItem('ai-automation-hub-template-requests');
     localStorage.removeItem('ai-automation-hub-client-id');
+    localStorage.removeItem('ai-automation-hub-settings'); // legacy local-only preference
     toast({
       title: "Data cleared",
       description: "All local flows, activity, and API keys have been deleted.",
@@ -91,8 +92,8 @@ export default function Settings() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
-      <div className="border-b bg-background sticky top-0 z-10 px-6 py-8">
-        <div className="max-w-3xl mx-auto w-full flex items-center gap-3">
+      <div className="bg-background sticky top-0 z-10 px-6 py-5 [@media(min-height:820px)]:py-8">
+        <div className="max-w-3xl xl:max-w-5xl mx-auto w-full flex items-center gap-3">
           <div className="bg-primary/10 text-primary p-2.5 rounded-xl">
             <SettingsIcon className="h-6 w-6" />
           </div>
@@ -104,7 +105,7 @@ export default function Settings() {
       </div>
 
       <div className="flex-1 overflow-auto bg-secondary/10">
-        <div className="p-6 max-w-3xl mx-auto w-full space-y-8 pb-20">
+        <div className="p-6 max-w-3xl xl:max-w-5xl mx-auto w-full space-y-8 pb-10 [@media(min-height:820px)]:pb-20">
           
           {/* Profile Section */}
           <motion.section 
@@ -178,7 +179,7 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <Label className="text-base">Theme</Label>
                     <p className="text-sm text-muted-foreground">Select your preferred color scheme.</p>
@@ -195,16 +196,29 @@ export default function Settings() {
                   </Select>
                 </div>
                 
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div className="space-y-0.5">
+                <div className="flex items-center justify-between gap-3 pt-4 border-t">
+                  <div className="space-y-0.5 min-w-0">
                     <Label className="text-base flex items-center gap-2">
                       <Bell className="h-4 w-4 text-muted-foreground" /> Email Notifications
                     </Label>
-                    <p className="text-sm text-muted-foreground">Receive weekly digests of your automation runs.</p>
+                    <p className="text-sm text-muted-foreground">
+                      {settingsUnauthorized
+                        ? 'Sign in to receive weekly digests of your automation runs.'
+                        : 'Receive weekly digests of your automation runs at your account email.'}
+                    </p>
                   </div>
-                  <Switch 
-                    checked={settings.notifications} 
-                    onCheckedChange={(checked) => updateSettings({ notifications: checked })} 
+                  <Switch
+                    checked={settings.notifications}
+                    disabled={!settingsLoaded || settingsUnauthorized}
+                    onCheckedChange={(checked) => {
+                      updateSettings({ notifications: checked }).catch((e) => {
+                        toast({
+                          title: 'Could not save preference',
+                          description: e instanceof Error ? e.message : 'Please try again.',
+                          variant: 'destructive',
+                        });
+                      });
+                    }}
                   />
                 </div>
               </CardContent>

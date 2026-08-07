@@ -25,9 +25,15 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, Field
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# Prefer the Supabase Postgres database when a valid connection string is
+# configured; fall back to the built-in Replit database otherwise.
+_supabase_url = (os.environ.get("SUPABASE_DB_URL") or "").strip()
+if _supabase_url and not _supabase_url.startswith(("postgresql://", "postgres://")):
+    print("WARNING: SUPABASE_DB_URL is not a postgresql:// connection string; ignoring it.")
+    _supabase_url = ""
+DATABASE_URL = _supabase_url or os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable is required")
+    raise RuntimeError("SUPABASE_DB_URL or DATABASE_URL environment variable is required")
 
 pool = ConnectionPool(DATABASE_URL, min_size=1, max_size=10, kwargs={"row_factory": dict_row})
 
@@ -42,13 +48,31 @@ KNOWN_TEMPLATE_IDS = {f"t-{i}" for i in range(1, 22)}
 
 # Per-template n8n webhook targets. The URLs stay server-side only — API
 # callers never see them; the run endpoint proxies to them ("masking").
+def _webhook_url_from_env() -> str:
+    """Prefer the plain env var override; fall back to the secret.
+
+    N8N_WEBHOOK_URL_OVERRIDE exists because the secret UI sometimes retains a
+    stale value; the override is a non-secret env var we can manage directly.
+    """
+    return (
+        os.environ.get("N8N_WEBHOOK_URL_OVERRIDE", "").strip()
+        or os.environ.get("N8N_WEBHOOK_URL", "").strip()
+    )
+
+
+N8N_WEBHOOK_URL = _webhook_url_from_env()
+
 TEMPLATE_WEBHOOKS = {
     tid: url
     for tid, url in {
-        "t-21": os.environ.get("N8N_WEBHOOK_URL", "").strip(),  # QCR Scan
+        "t-21": N8N_WEBHOOK_URL,  # QCR Scan
     }.items()
     if url
 }
+
+# Weekly digest constants
+DIGEST_PERIOD_SECONDS = 7 * 24 * 3600
+DIGEST_CHECK_SECONDS = 3600
 
 
 @contextmanager
@@ -91,6 +115,23 @@ def init_db() -> None:
                 client_id   TEXT NOT NULL,
                 status      TEXT NOT NULL,
                 created_at  TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_settings (
+                user_id             TEXT PRIMARY KEY,
+                email_notifications BOOLEAN NOT NULL,
+                updated_at          TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS digest_log (
+                user_id      TEXT PRIMARY KEY,
+                last_sent_at TEXT NOT NULL
             )
             """
         )
@@ -240,6 +281,14 @@ class TemplateRequestIn(BaseModel):
 def healthz():
     return {"ok": True}
 
+class SettingsOut(BaseModel):
+    emailNotifications: bool
+
+
+class SettingsIn(BaseModel):
+    emailNotifications: bool
+
+
 @app.get("/api/me")
 def me(user_id: str = Depends(require_user)):
     return {"userId": user_id}
@@ -383,6 +432,10 @@ def require_admin(request: Request) -> None:
     - the signed-in Clerk user's email is listed in ADMIN_EMAILS, or
     - a valid ADMIN_TOKEN is supplied as a Bearer token (legacy/API access).
     """
+    # Temporary kill switch: set ADMIN_DISABLED=1 to hide all admin access
+    # (useful for previewing the app as a regular user).
+    if os.environ.get("ADMIN_DISABLED"):
+        raise HTTPException(status_code=404, detail="Not found")
     authorization = request.headers.get("authorization")
     admin_token = os.environ.get("ADMIN_TOKEN")
     provided = (authorization or "").removeprefix("Bearer ").strip()
@@ -590,12 +643,19 @@ async def run_template(
             (run_id, template_id, row["user_id"], "queued", now_iso()),
         )
 
+    return await _forward_run(template_id, run_id, request)
+
+
+async def _forward_run(template_id: str, run_id: str, request: Request) -> dict:
+    """Proxies the caller's payload to the template's n8n webhook.
+
+    Masks the webhook URL behind this API; content is passed through as-is
+    (JSON or multipart). Updates the run row with the final status.
+    """
     webhook_url = TEMPLATE_WEBHOOKS.get(template_id)
     if not webhook_url:
         return {"ok": True, "runId": run_id, "templateId": template_id, "status": "queued"}
 
-    # Forward the caller's payload to the template's n8n webhook, masking its
-    # URL behind this API. Content is passed through as-is (JSON or multipart).
     raw = await request.body()
     fwd_headers = {}
     content_type = request.headers.get("content-type")
@@ -609,6 +669,10 @@ async def run_template(
             result = resp.json()
         except ValueError:
             result = resp.text
+        # n8n workflows may report failures in the body with HTTP 200
+        # (e.g. {"status": "error", "message": ...}) — treat those as failed.
+        if succeeded and isinstance(result, dict) and result.get("status") == "error":
+            succeeded = False
     except httpx.HTTPError:
         with db() as conn:
             conn.execute("UPDATE runs SET status = %s WHERE id = %s", ("failed", run_id))
@@ -618,8 +682,31 @@ async def run_template(
     with db() as conn:
         conn.execute("UPDATE runs SET status = %s WHERE id = %s", (status, run_id))
     if not succeeded:
-        raise HTTPException(status_code=502, detail="The automation failed to process this request.")
+        detail = "The automation failed to process this request."
+        if isinstance(result, dict) and isinstance(result.get("message"), str):
+            detail = result["message"]
+        raise HTTPException(status_code=422, detail=detail)
     return {"ok": True, "runId": run_id, "templateId": template_id, "status": status, "result": result}
+
+
+@app.post("/api/templates/{template_id}/run")
+async def run_template_web(
+    template_id: str,
+    request: Request,
+    user_id: str = Depends(require_user),
+):
+    """In-app runner: signed-in users run a template from the website
+    (no API key needed). Same proxy, logging, and rate limits as the
+    key-based endpoint, but throttled per account instead of per key."""
+    template_id = check_template_id(template_id)
+    _rate_limit_or_429(f"webrun:{user_id}", RUN_LIMIT_PER_KEY)
+    run_id = str(uuid.uuid4())
+    with db() as conn:
+        conn.execute(
+            "INSERT INTO runs (id, template_id, client_id, status, created_at) VALUES (%s, %s, %s, %s, %s)",
+            (run_id, template_id, user_id, "queued", now_iso()),
+        )
+    return await _forward_run(template_id, run_id, request)
 
 
 @app.get("/api/v1/templates/{template_id}/runs")
@@ -702,3 +789,144 @@ async def clerk_proxy(path: str, request: Request):
         headers=resp_headers,
         media_type=upstream.headers.get("content-type"),
     )
+
+@app.get("/api/settings", response_model=SettingsOut)
+def get_settings(user_id: str = Depends(require_user)):
+    with db() as conn:
+        row = conn.execute(
+            "SELECT email_notifications FROM user_settings WHERE user_id = %s", (user_id,)
+        ).fetchone()
+    # Email digests are opt-in: users without a stored preference are off.
+    return SettingsOut(emailNotifications=bool(row["email_notifications"]) if row else False)
+
+
+
+def _digest_loop() -> None:
+    # Fire once immediately so opted-in users are not made to wait up to an
+    # hour after a fresh deploy, then repeat on the hourly cadence.
+    try:
+        summary = run_digest_once()
+        if summary["due"]:
+            print(f"[digest] startup sweep: {summary}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"[digest] startup sweep failed: {e}", flush=True)
+    while True:
+        time.sleep(DIGEST_CHECK_SECONDS)
+        try:
+            summary = run_digest_once()
+            if summary["due"]:
+                print(f"[digest] {summary}", flush=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"[digest] sweep failed: {e}", flush=True)
+
+def run_digest_once() -> dict:
+    """Sends the weekly digest to every opted-in user who is due. Returns a summary."""
+    cutoff_sent = time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - DIGEST_PERIOD_SECONDS)
+    )
+    week_ago = cutoff_sent
+    with db() as conn:
+        due = conn.execute(
+            "SELECT s.user_id FROM user_settings s "
+            "LEFT JOIN digest_log d ON d.user_id = s.user_id "
+            "WHERE s.email_notifications AND (d.last_sent_at IS NULL OR d.last_sent_at < %s)",
+            (cutoff_sent,),
+        ).fetchall()
+    summary = {"due": len(due), "sent": 0, "skippedNoRuns": 0, "errors": []}
+    for row in due:
+        user_id = row["user_id"]
+        try:
+            with db() as conn:
+                runs = conn.execute(
+                    "SELECT template_id, status FROM runs WHERE client_id = %s AND created_at >= %s",
+                    (user_id, week_ago),
+                ).fetchall()
+            if not runs:
+                # No runs this week — leave digest_log untouched so the user
+                # is checked again next sweep and gets a digest as soon as they
+                # have run data worth reporting.
+                summary["skippedNoRuns"] += 1
+                continue
+            email = _get_user_email(user_id)
+            if not email:
+                raise RuntimeError("no email address on account")
+            send_email(email, "Your weekly automation digest", _digest_html([dict(r) for r in runs]))
+            with db() as conn:
+                conn.execute(
+                    "INSERT INTO digest_log (user_id, last_sent_at) VALUES (%s, %s) "
+                    "ON CONFLICT (user_id) DO UPDATE SET last_sent_at = EXCLUDED.last_sent_at",
+                    (user_id, now_iso()),
+                )
+            summary["sent"] += 1
+        except Exception as e:  # noqa: BLE001 — keep going for other users, but report loudly.
+            print(f"[digest] failed for {user_id}: {e}", flush=True)
+            summary["errors"].append(f"{user_id}: {e}")
+    return summary
+
+@app.post("/api/admin/digest/run")
+def admin_run_digest(request: Request):
+    """Owner-only: trigger a digest sweep immediately (for testing/ops)."""
+    require_admin(request)
+    return run_digest_once()
+
+@app.put("/api/settings", response_model=SettingsOut)
+def put_settings(body: SettingsIn, user_id: str = Depends(require_user)):
+    with db() as conn:
+        conn.execute(
+            "INSERT INTO user_settings (user_id, email_notifications, updated_at) "
+            "VALUES (%s, %s, %s) "
+            "ON CONFLICT (user_id) DO UPDATE SET email_notifications = EXCLUDED.email_notifications, "
+            "updated_at = EXCLUDED.updated_at",
+            (user_id, body.emailNotifications, now_iso()),
+        )
+    return SettingsOut(emailNotifications=body.emailNotifications)
+
+@app.on_event("startup")
+def _start_digest_thread() -> None:
+    import threading
+
+    threading.Thread(target=_digest_loop, name="weekly-digest", daemon=True).start()
+
+
+def _digest_html(runs: list[dict]) -> str:
+    total = len(runs)
+    by_status: dict[str, int] = {}
+    by_template: dict[str, int] = {}
+    for r in runs:
+        by_status[r["status"]] = by_status.get(r["status"], 0) + 1
+        by_template[r["template_id"]] = by_template.get(r["template_id"], 0) + 1
+    status_rows = "".join(
+        f"<li>{count} {status}</li>" for status, count in sorted(by_status.items())
+    )
+    template_rows = "".join(
+        f"<li><code>{tpl}</code>: {count} run{'s' if count != 1 else ''}</li>"
+        for tpl, count in sorted(by_template.items(), key=lambda kv: -kv[1])
+    )
+    return (
+        "<h2>Your weekly automation digest</h2>"
+        f"<p>You had <strong>{total}</strong> automation run{'s' if total != 1 else ''} in the last 7 days.</p>"
+        f"<h3>By status</h3><ul>{status_rows}</ul>"
+        f"<h3>By template</h3><ul>{template_rows}</ul>"
+        "<p style=\"color:#666;font-size:12px\">You're receiving this because Email Notifications "
+        "is turned on in your AI Automation Hub settings. Turn it off there to stop these digests.</p>"
+    )
+
+def send_email(to_addr: str, subject: str, html_body: str) -> None:
+    """Sends an email by POSTing to the n8n webhook.
+
+    The n8n workflow is expected to read `to`, `subject`, and `html` from the
+    JSON body and deliver the message via whichever email node is configured
+    there (SMTP, SendGrid, Gmail, etc.).
+
+    N8N_WEBHOOK_URL is read at call time (not cached at import) so that the
+    secret is always current in every runtime environment.
+    """
+    webhook_url = _webhook_url_from_env()
+    if not webhook_url:
+        raise RuntimeError("N8N_WEBHOOK_URL is not configured — cannot send email")
+    resp = httpx.post(
+        webhook_url,
+        json={"to": to_addr, "subject": subject, "html": html_body},
+        timeout=30,
+    )
+    resp.raise_for_status()
