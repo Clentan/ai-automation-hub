@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { useSearch, Link } from 'wouter';
 import { KeyRound, Copy, RefreshCw, Check, Sparkles, Lock, Zap, Trash2, LayoutGrid, LogIn, ShieldCheck } from 'lucide-react';
 import { useUser } from '@clerk/react';
-import { MOCK_TEMPLATES, isComingSoon } from '@/lib/data';
+import { isComingSoon } from '@/lib/data';
+import { useTemplates } from '@/lib/use-templates';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,7 @@ export default function ApiAccess() {
   const { toast } = useToast();
   const { user, isLoaded } = useUser();
   const { keys, loading, unauthorized, getKeyFor, requestKeyFor, regenerateKeyFor, revokeKeyFor } = useApiKeys();
+  const { templates } = useTemplates();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   // Plaintext keys revealed in this session (issue/regenerate). Shown once —
   // the server only stores a hash and can never display them again.
@@ -78,8 +80,8 @@ export default function ApiAccess() {
   const search = useSearch();
   const requestedTemplate = useMemo(() => {
     const id = new URLSearchParams(search).get('template');
-    return id ? MOCK_TEMPLATES.find((t) => t.id === id) ?? null : null;
-  }, [search]);
+    return id ? templates.find((t) => t.id === id) ?? null : null;
+  }, [search, templates]);
 
   const requestedKey = requestedTemplate ? getKeyFor(requestedTemplate.id) : null;
 
@@ -241,7 +243,7 @@ export default function ApiAccess() {
               ) : (
                 <div className="divide-y divide-border/50">
                   {keys.map((entry) => {
-                    const template = MOCK_TEMPLATES.find((t) => t.id === entry.templateId);
+                    const template = templates.find((t) => t.id === entry.templateId);
                     if (!template) return null;
                     const plaintext = revealed[entry.templateId];
                     return (

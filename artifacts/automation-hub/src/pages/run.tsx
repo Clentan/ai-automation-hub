@@ -12,7 +12,8 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { useUser } from '@clerk/react';
-import { MOCK_TEMPLATES, CATEGORIES, isComingSoon, Template } from '@/lib/data';
+import { CATEGORIES, isComingSoon, Template } from '@/lib/data';
+import { useTemplates } from '@/lib/use-templates';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -98,6 +99,7 @@ export default function RunPage() {
   const { user, isLoaded } = useUser();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const { templates } = useTemplates();
   const [, setLocation] = useLocation();
   const [launching, setLaunching] = useState<Template | null>(null);
   const launchTimer = useRef<number | null>(null);
@@ -112,7 +114,7 @@ export default function RunPage() {
   };
 
   const filtered = useMemo(() => {
-    let result = MOCK_TEMPLATES;
+    let result = templates;
     if (activeCategory !== 'All') {
       result = result.filter((t) => t.categories.includes(activeCategory));
     }
@@ -124,7 +126,7 @@ export default function RunPage() {
     }
     // Runnable first, then coming soon.
     return [...result].sort((a, b) => Number(isComingSoon(a)) - Number(isComingSoon(b)));
-  }, [search, activeCategory]);
+  }, [templates, search, activeCategory]);
 
   if (isLoaded && !user) return <SignInPrompt />;
 

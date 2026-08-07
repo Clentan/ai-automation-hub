@@ -61,6 +61,22 @@ export interface AdminStats {
   recentRuns: { id: string; template_id: string; client_id: string; status: string; created_at: string }[];
 }
 
+export interface AdminTemplate {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  type: string;
+  categories: string[];
+  usageCount: number;
+  services: string[];
+  steps: { title: string; description: string; serviceId: string }[];
+  createdAt: string;
+  available: boolean;
+  documentation: string;
+  webhookUrl: string;
+}
+
 export interface AdminUserRow {
   id: string;
   email: string | null;

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MOCK_TEMPLATES, Template } from './data';
+import { Template } from './data';
+import { getCachedTemplate } from './use-templates';
 
 export type FlowStatus = 'on' | 'off';
 
@@ -93,7 +94,7 @@ export function useFlows() {
   }, [activity, isLoaded]);
 
   const createFlow = useCallback((templateId: string) => {
-    const template = MOCK_TEMPLATES.find((t) => t.id === templateId);
+    const template = getCachedTemplate(templateId);
     if (!template) return null;
 
     const newFlow: Flow = {
@@ -154,7 +155,7 @@ export function useFlows() {
           );
           return updated;
         }
-        const template = MOCK_TEMPLATES.find((t) => t.id === templateId);
+        const template = getCachedTemplate(templateId);
         if (!template) return prev;
         const newFlow: Flow = {
           id: `f-${generateId()}`,

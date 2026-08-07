@@ -10,6 +10,7 @@ user id, stored hashed (SHA-256); plaintext is returned only when issued
 or regenerated.
 """
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -42,10 +43,6 @@ app = FastAPI(title="AI Automation Hub API", docs_url="/api/docs", openapi_url="
 # The frontend is served same-origin through the workspace proxy, so no
 # cross-origin access is required or allowed.
 
-# Server-side template catalog: keys can only be issued for these ids.
-# Keep in sync with the frontend catalog in artifacts/automation-hub/src/lib/data.ts.
-KNOWN_TEMPLATE_IDS = {f"t-{i}" for i in range(1, 22)}
-
 # Per-template n8n webhook targets. The URLs stay server-side only — API
 # callers never see them; the run endpoint proxies to them ("masking").
 def _webhook_url_from_env() -> str:
@@ -62,13 +59,25 @@ def _webhook_url_from_env() -> str:
 
 N8N_WEBHOOK_URL = _webhook_url_from_env()
 
-TEMPLATE_WEBHOOKS = {
-    tid: url
-    for tid, url in {
-        "t-21": N8N_WEBHOOK_URL,  # QCR Scan
-    }.items()
-    if url
-}
+# Templates whose webhook URL comes from the environment when no explicit
+# webhook_url is stored in the DB row (legacy behavior for QCR Scan).
+ENV_WEBHOOK_TEMPLATE_IDS = {"t-21"}
+
+
+def template_webhook_url(template_id: str) -> str:
+    """Resolve the n8n webhook target for a template.
+
+    Prefers the webhook_url stored on the template row; falls back to the
+    N8N_WEBHOOK_URL env/secret for legacy env-configured templates.
+    """
+    with db() as conn:
+        row = conn.execute(
+            "SELECT webhook_url FROM templates WHERE id = %s", (template_id,)
+        ).fetchone()
+    url = ((row or {}).get("webhook_url") or "").strip()
+    if not url and template_id in ENV_WEBHOOK_TEMPLATE_IDS:
+        url = _webhook_url_from_env()
+    return url
 
 # Weekly digest constants
 DIGEST_PERIOD_SECONDS = 7 * 24 * 3600
@@ -79,6 +88,10 @@ DIGEST_CHECK_SECONDS = 3600
 def db():
     with pool.connection() as conn:
         yield conn
+
+
+def now_iso() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
 def init_db() -> None:
@@ -135,6 +148,25 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS templates (
+                id            TEXT PRIMARY KEY,
+                name          TEXT NOT NULL,
+                description   TEXT NOT NULL DEFAULT '',
+                author        TEXT NOT NULL DEFAULT 'AI Automation Hub',
+                type          TEXT NOT NULL DEFAULT 'Automated',
+                categories    JSONB NOT NULL DEFAULT '[]',
+                usage_count   INTEGER NOT NULL DEFAULT 0,
+                services      JSONB NOT NULL DEFAULT '[]',
+                steps         JSONB NOT NULL DEFAULT '[]',
+                created_at    TEXT NOT NULL,
+                available     BOOLEAN NOT NULL DEFAULT FALSE,
+                documentation TEXT NOT NULL DEFAULT '',
+                webhook_url   TEXT NOT NULL DEFAULT ''
+            )
+            """
+        )
         # Migration: add status column to template_requests if missing.
         conn.execute(
             "ALTER TABLE template_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new'"
@@ -142,6 +174,44 @@ def init_db() -> None:
         # Legacy anonymous keys (bound to per-browser client ids, stored in
         # plaintext) can't be mapped to accounts; drop the old table.
         conn.execute("DROP TABLE IF EXISTS api_keys")
+        _seed_templates(conn)
+
+
+def _seed_templates(conn) -> None:
+    """One-time seed of the templates table from the shipped catalog."""
+    count = conn.execute("SELECT COUNT(*) AS c FROM templates").fetchone()["c"]
+    if count:
+        return
+    seed_path = os.path.join(os.path.dirname(__file__), "templates_seed.json")
+    try:
+        with open(seed_path, encoding="utf-8") as f:
+            seed = json.load(f)
+    except FileNotFoundError:
+        print("WARNING: templates_seed.json not found; templates table left empty.")
+        return
+    for t in seed:
+        conn.execute(
+            "INSERT INTO templates (id, name, description, author, type, categories, "
+            "usage_count, services, steps, created_at, available, documentation, webhook_url) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (id) DO NOTHING",
+            (
+                t["id"],
+                t["name"],
+                t.get("description", ""),
+                t.get("author", "AI Automation Hub"),
+                t.get("type", "Automated"),
+                json.dumps(t.get("categories", [])),
+                t.get("usageCount", 0),
+                json.dumps(t.get("services", [])),
+                json.dumps(t.get("steps", [])),
+                t.get("createdAt") or now_iso(),
+                bool(t.get("available")),
+                t.get("documentation", ""),
+                "",
+            ),
+        )
+    print(f"[templates] seeded {len(seed)} templates")
 
 
 init_db()
@@ -149,10 +219,6 @@ init_db()
 REQUEST_STATUSES = {"new", "reviewed", "planned", "done"}
 
 TEMPLATE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-
-
-def now_iso() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
 # --------------------------------------------------------------------------
@@ -260,7 +326,11 @@ def _get_jwks() -> dict:
     _jwks_cache["fetched_at"] = now
     return _jwks_cache["keys"]
 def check_template_id(template_id: str) -> str:
-    if not TEMPLATE_ID_RE.match(template_id) or template_id not in KNOWN_TEMPLATE_IDS:
+    if not TEMPLATE_ID_RE.match(template_id):
+        raise HTTPException(status_code=404, detail="Unknown template id")
+    with db() as conn:
+        row = conn.execute("SELECT id FROM templates WHERE id = %s", (template_id,)).fetchone()
+    if not row:
         raise HTTPException(status_code=404, detail="Unknown template id")
     return template_id
 
@@ -281,6 +351,163 @@ class TemplateRequestIn(BaseModel):
 @app.get("/api/healthz")
 def healthz():
     return {"ok": True}
+
+
+# --------------------------------------------------------------------------
+# Template catalog (DB-backed)
+# --------------------------------------------------------------------------
+
+TEMPLATE_TYPES = {"Automated", "Scheduled", "Instant"}
+
+
+class TemplateStep(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=500)
+    serviceId: str = Field(default="", max_length=64)
+
+
+class TemplateIn(BaseModel):
+    id: Optional[str] = Field(default=None, min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=1000)
+    author: str = Field(default="AI Automation Hub", max_length=100)
+    type: str = Field(default="Automated", max_length=20)
+    categories: list[str] = Field(default_factory=list)
+    usageCount: int = Field(default=0, ge=0)
+    services: list[str] = Field(default_factory=list)
+    steps: list[TemplateStep] = Field(default_factory=list)
+    available: bool = False
+    documentation: str = Field(default="", max_length=10000)
+    webhookUrl: str = Field(default="", max_length=500)
+
+
+class TemplatePatch(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    author: Optional[str] = Field(default=None, max_length=100)
+    type: Optional[str] = Field(default=None, max_length=20)
+    categories: Optional[list[str]] = None
+    usageCount: Optional[int] = Field(default=None, ge=0)
+    services: Optional[list[str]] = None
+    steps: Optional[list[TemplateStep]] = None
+    available: Optional[bool] = None
+    documentation: Optional[str] = Field(default=None, max_length=10000)
+    webhookUrl: Optional[str] = Field(default=None, max_length=500)
+
+
+def _template_public(row: dict) -> dict:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "description": row["description"],
+        "author": row["author"],
+        "type": row["type"],
+        "categories": row["categories"],
+        "usageCount": row["usage_count"],
+        "services": row["services"],
+        "steps": row["steps"],
+        "createdAt": row["created_at"],
+        "available": row["available"],
+        "documentation": row["documentation"],
+    }
+
+
+@app.get("/api/templates")
+def list_templates():
+    """Public template catalog (webhook URLs stay server-side)."""
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM templates ORDER BY created_at DESC").fetchall()
+    return [_template_public(r) for r in rows]
+
+
+@app.get("/api/admin/templates")
+def admin_list_templates(request: Request):
+    require_admin(request)
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM templates ORDER BY created_at DESC").fetchall()
+    return [{**_template_public(r), "webhookUrl": r["webhook_url"]} for r in rows]
+
+
+def _validate_template_fields(type_: Optional[str], template_id: Optional[str] = None) -> None:
+    if type_ is not None and type_ not in TEMPLATE_TYPES:
+        raise HTTPException(status_code=422, detail=f"type must be one of {sorted(TEMPLATE_TYPES)}")
+    if template_id is not None and not TEMPLATE_ID_RE.match(template_id):
+        raise HTTPException(status_code=422, detail="id may only contain letters, digits, - and _")
+
+
+@app.post("/api/admin/templates", status_code=201)
+def admin_create_template(body: TemplateIn, request: Request):
+    require_admin(request)
+    template_id = (body.id or "").strip() or f"t-{uuid.uuid4().hex[:8]}"
+    _validate_template_fields(body.type, template_id)
+    created = now_iso()
+    with db() as conn:
+        cur = conn.execute(
+            "INSERT INTO templates (id, name, description, author, type, categories, "
+            "usage_count, services, steps, created_at, available, documentation, webhook_url) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (id) DO NOTHING",
+            (
+                template_id,
+                body.name.strip(),
+                body.description.strip(),
+                body.author.strip() or "AI Automation Hub",
+                body.type,
+                json.dumps(body.categories),
+                body.usageCount,
+                json.dumps(body.services),
+                json.dumps([s.model_dump() for s in body.steps]),
+                created,
+                body.available,
+                body.documentation,
+                body.webhookUrl.strip(),
+            ),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=409, detail="A template with this id already exists")
+        row = conn.execute("SELECT * FROM templates WHERE id = %s", (template_id,)).fetchone()
+    return {**_template_public(row), "webhookUrl": row["webhook_url"]}
+
+
+@app.patch("/api/admin/templates/{template_id}")
+def admin_update_template(template_id: str, body: TemplatePatch, request: Request):
+    require_admin(request)
+    _validate_template_fields(body.type)
+    updates: dict[str, object] = {}
+    if body.name is not None:
+        updates["name"] = body.name.strip()
+    if body.description is not None:
+        updates["description"] = body.description.strip()
+    if body.author is not None:
+        updates["author"] = body.author.strip() or "AI Automation Hub"
+    if body.type is not None:
+        updates["type"] = body.type
+    if body.categories is not None:
+        updates["categories"] = json.dumps(body.categories)
+    if body.usageCount is not None:
+        updates["usage_count"] = body.usageCount
+    if body.services is not None:
+        updates["services"] = json.dumps(body.services)
+    if body.steps is not None:
+        updates["steps"] = json.dumps([s.model_dump() for s in body.steps])
+    if body.available is not None:
+        updates["available"] = body.available
+    if body.documentation is not None:
+        updates["documentation"] = body.documentation
+    if body.webhookUrl is not None:
+        updates["webhook_url"] = body.webhookUrl.strip()
+    if not updates:
+        raise HTTPException(status_code=422, detail="No fields to update")
+    set_clause = ", ".join(f"{col} = %s" for col in updates)
+    with db() as conn:
+        cur = conn.execute(
+            f"UPDATE templates SET {set_clause} WHERE id = %s",
+            (*updates.values(), template_id),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Template not found")
+        row = conn.execute("SELECT * FROM templates WHERE id = %s", (template_id,)).fetchone()
+    return {**_template_public(row), "webhookUrl": row["webhook_url"]}
 
 class SettingsOut(BaseModel):
     emailNotifications: bool
@@ -732,7 +959,7 @@ async def _forward_run(template_id: str, run_id: str, request: Request) -> dict:
     Masks the webhook URL behind this API; content is passed through as-is
     (JSON or multipart). Updates the run row with the final status.
     """
-    webhook_url = TEMPLATE_WEBHOOKS.get(template_id)
+    webhook_url = template_webhook_url(template_id)
     if not webhook_url:
         return {"ok": True, "runId": run_id, "templateId": template_id, "status": "queued"}
 
@@ -878,7 +1105,6 @@ def get_settings(user_id: str = Depends(require_user)):
         ).fetchone()
     # Email digests are opt-in: users without a stored preference are off.
     return SettingsOut(emailNotifications=bool(row["email_notifications"]) if row else False)
-
 
 
 def _digest_loop() -> None:

@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { useUser } from '@clerk/react';
 import { useFlowsContext } from '@/lib/flows-context';
-import { MOCK_TEMPLATES, isComingSoon } from '@/lib/data';
+import { isComingSoon } from '@/lib/data';
+import { useTemplates } from '@/lib/use-templates';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -127,7 +128,8 @@ export default function RunDetail() {
   const { user, isLoaded } = useUser();
   const { recordRun } = useFlowsContext();
   const params = useParams<{ templateId: string }>();
-  const template = MOCK_TEMPLATES.find((t) => t.id === params.templateId);
+  const { templates, isLoading: templatesLoading } = useTemplates();
+  const template = templates.find((t) => t.id === params.templateId);
 
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -135,6 +137,14 @@ export default function RunDetail() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   if (isLoaded && !user) return <SignInPrompt />;
+
+  if (templatesLoading && !template) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-secondary/10 p-6">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
 
   if (!template || isComingSoon(template)) {
     return (

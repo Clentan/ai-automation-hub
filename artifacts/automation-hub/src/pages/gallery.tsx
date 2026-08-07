@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Search, ChevronDown, Check, Zap, Users, Play, Clock, ArrowRight, KeyRound, Lightbulb, SlidersHorizontal } from 'lucide-react';
-import { MOCK_TEMPLATES, CATEGORIES, isComingSoon, Template } from '@/lib/data';
+import { CATEGORIES, isComingSoon, Template } from '@/lib/data';
+import { useTemplates } from '@/lib/use-templates';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { useFlowsContext } from '@/lib/flows-context';
 import { Input } from '@/components/ui/input';
@@ -34,11 +35,12 @@ export default function Gallery() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   
   const { createFlow } = useFlowsContext();
+  const { templates } = useTemplates();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const filteredAndSorted = useMemo(() => {
-    let result = MOCK_TEMPLATES;
+    let result = templates;
 
     // Filter by search
     if (search.trim()) {
@@ -65,7 +67,7 @@ export default function Gallery() {
     });
 
     return result;
-  }, [search, activeCategory, sortBy]);
+  }, [templates, search, activeCategory, sortBy]);
 
   const handleCreateFlow = () => {
     if (!selectedTemplate) return;

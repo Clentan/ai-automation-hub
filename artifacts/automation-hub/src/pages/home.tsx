@@ -12,7 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { MOCK_TEMPLATES, isComingSoon } from '@/lib/data';
+import { isComingSoon } from '@/lib/data';
+import { useTemplates } from '@/lib/use-templates';
 import { useFlowsContext } from '@/lib/flows-context';
 import { ServiceIcon } from '@/components/icons/service-icons';
 import { formatDistanceToNow } from 'date-fns';
@@ -33,11 +34,12 @@ function formatCount(n: number) {
 
 export default function Home() {
   const { flows, activity } = useFlowsContext();
+  const { templates } = useTemplates();
 
   const activeFlows = flows.filter((f) => f.status === 'on').length;
   const totalRuns = flows.reduce((sum, f) => sum + f.runCount, 0);
   const recentActivity = activity.slice(0, 4);
-  const popular = [...MOCK_TEMPLATES]
+  const popular = [...templates]
     .sort((a, b) => b.usageCount - a.usageCount)
     .slice(0, 4);
 
@@ -107,12 +109,12 @@ export default function Home() {
                   <LayoutGrid className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-foreground">{MOCK_TEMPLATES.length}</div>
+                  <div className="text-3xl font-bold text-foreground">{templates.length}</div>
                   <div className="text-sm font-medium text-muted-foreground mt-0.5">Templates available</div>
                   <div className="text-xs font-medium mt-1 flex items-center gap-2">
-                    <span className="text-primary">{MOCK_TEMPLATES.filter((t) => !isComingSoon(t)).length} active</span>
+                    <span className="text-primary">{templates.filter((t) => !isComingSoon(t)).length} active</span>
                     <span className="text-muted-foreground/60">·</span>
-                    <span className="text-muted-foreground">{MOCK_TEMPLATES.filter(isComingSoon).length} coming soon</span>
+                    <span className="text-muted-foreground">{templates.filter(isComingSoon).length} coming soon</span>
                   </div>
                 </div>
               </CardContent>
