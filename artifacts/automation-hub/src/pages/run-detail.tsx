@@ -128,7 +128,7 @@ export default function RunDetail() {
   const { user, isLoaded } = useUser();
   const { recordRun } = useFlowsContext();
   const params = useParams<{ templateId: string }>();
-  const { templates, isLoading: templatesLoading } = useTemplates();
+  const { templates, isLoading: templatesLoading, error: templatesError } = useTemplates();
   const template = templates.find((t) => t.id === params.templateId);
 
   const [file, setFile] = useState<File | null>(null);
@@ -142,6 +142,22 @@ export default function RunDetail() {
     return (
       <div className="flex-1 flex items-center justify-center bg-secondary/10 p-6">
         <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!template && templatesError) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-secondary/10 p-6">
+        <div className="text-center">
+          <p className="font-semibold text-foreground mb-1">Couldn't load automations</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            Something went wrong while loading. Check your connection and try again.
+          </p>
+          <Button variant="outline" className="rounded-full" onClick={() => window.location.reload()}>
+            Try again
+          </Button>
+        </div>
       </div>
     );
   }
@@ -174,6 +190,7 @@ export default function RunDetail() {
 
   const run = () => {
     if (!file) return;
+    if (state.phase === 'running') return; // guard against double-submits
     const startedAt = Date.now();
     setState({ phase: 'running', stage: 'uploading', percent: 0 });
     const form = new FormData();
@@ -214,6 +231,13 @@ export default function RunDetail() {
     };
     xhr.onerror = () => {
       setState({ phase: 'error', message: 'Could not reach the server. Check your connection and try again.' });
+      recordRun(template.id, 'failed', Date.now() - startedAt);
+    };
+    // Don't leave the spinner running forever if the server never answers.
+    xhr.timeout = 180_000;
+    xhr.ontimeout = () => {
+      setState({ phase: 'error', message: 'This is taking too long — the automation did not respond. Please try again.' });
+      recordRun(template.id, 'failed', Date.now() - startedAt);
     };
     xhr.send(form);
   };

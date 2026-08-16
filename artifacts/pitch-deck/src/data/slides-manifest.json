@@ -1,0 +1,82 @@
+[
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000001",
+    "position": 1,
+    "filepath": "src/pages/slides/TitleSlide.tsx",
+    "title": "AI Automation Hub",
+    "description": "Title slide with tagline",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000002",
+    "position": 2,
+    "filepath": "src/pages/slides/ProblemSlide.tsx",
+    "title": "The problem",
+    "description": "Manual tasks, scattered tools, no visibility",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000003",
+    "position": 3,
+    "filepath": "src/pages/slides/SolutionSlide.tsx",
+    "title": "The solution",
+    "description": "Curated gallery, one-click, personal access keys",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000004",
+    "position": 4,
+    "filepath": "src/pages/slides/HowItWorksSlide.tsx",
+    "title": "How it works",
+    "description": "Browse, connect, upload, results",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000005",
+    "position": 5,
+    "filepath": "src/pages/slides/QcrScanSlide.tsx",
+    "title": "Live today: QCR Scan",
+    "description": "PDF to structured data with run history",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000006",
+    "position": 6,
+    "filepath": "src/pages/slides/TrustSlide.tsx",
+    "title": "Built for trust and visibility",
+    "description": "Keys, run history, digests, no silent failures",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000007",
+    "position": 7,
+    "filepath": "src/pages/slides/OwnerControlSlide.tsx",
+    "title": "Owner control",
+    "description": "Admin dashboard, user and key management, requests",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000008",
+    "position": 8,
+    "filepath": "src/pages/slides/PipelineSlide.tsx",
+    "title": "The template pipeline",
+    "description": "Upcoming templates and user requests",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000009",
+    "position": 9,
+    "filepath": "src/pages/slides/WhyNowSlide.tsx",
+    "title": "Why now",
+    "description": "AI readiness, underserved small teams",
+    "speakerNotes": ""
+  },
+  {
+    "id": "0f9a1a1e-1111-4a01-9a01-000000000010",
+    "position": 10,
+    "filepath": "src/pages/slides/ClosingSlide.tsx",
+    "title": "Let's automate the busywork",
+    "description": "Closing slide",
+    "speakerNotes": ""
+  }
+]

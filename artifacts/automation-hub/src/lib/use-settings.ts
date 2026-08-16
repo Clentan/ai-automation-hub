@@ -13,6 +13,8 @@ interface SettingsState {
   settings: UserSettings;
   isLoaded: boolean;
   unauthorized: boolean;
+  /** True when the last attempt to load settings from the server failed. */
+  loadFailed: boolean;
 }
 
 // Email digests are opt-in server-side; mirror that default here.
@@ -23,6 +25,7 @@ const initialState: SettingsState = {
   settings: defaultSettings,
   isLoaded: false,
   unauthorized: false,
+  loadFailed: false,
 };
 
 let state: SettingsState = { ...initialState };
@@ -48,7 +51,7 @@ export function resetSettingsForUser(userId: string | null): void {
     return;
   }
   // Immediately mark as loading for the new user so stale values aren't shown.
-  setState({ forUserId: userId, settings: defaultSettings, isLoaded: false, unauthorized: false });
+  setState({ forUserId: userId, settings: defaultSettings, isLoaded: false, unauthorized: false, loadFailed: false });
   void fetchSettings(userId);
 }
 
@@ -68,11 +71,12 @@ async function fetchSettings(userId: string): Promise<void> {
       settings: { notifications: Boolean(data.emailNotifications) },
       isLoaded: true,
       unauthorized: false,
+      loadFailed: false,
     });
   } catch (e) {
     console.error('Failed to load settings', e);
     if (state.forUserId === userId) {
-      setState({ isLoaded: true });
+      setState({ isLoaded: true, loadFailed: true });
     }
   }
 }
@@ -127,6 +131,8 @@ export function useSettings() {
     settings: snapshot.settings,
     isLoaded: snapshot.isLoaded,
     unauthorized: snapshot.unauthorized,
+    loadFailed: snapshot.loadFailed,
     updateSettings: updateSettingsStore,
+    retryLoad: () => { if (snapshot.forUserId) resetSettingsForUser(snapshot.forUserId); },
   };
 }

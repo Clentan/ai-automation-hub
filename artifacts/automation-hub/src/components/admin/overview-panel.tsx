@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { adminFetch, type AdminStats } from '@/lib/admin-api';
+import { Button } from '@/components/ui/button';
+import { adminFetch, AdminAuthError, type AdminStats } from '@/lib/admin-api';
 import { formatDate } from './requests-panel';
 
 function StatCard({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: number; sub?: string }) {
@@ -41,18 +42,39 @@ function breakdown(map: Record<string, number>): string {
 
 export function OverviewPanel({ token, onAuthError }: { token: string | null; onAuthError: () => void }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoadError(null);
     try {
       setStats(await adminFetch<AdminStats>('/admin/stats', token));
-    } catch {
-      onAuthError();
+    } catch (e) {
+      if (e instanceof AdminAuthError) {
+        onAuthError();
+      } else {
+        // Transient failure (network/server): show it instead of locking the user out.
+        setLoadError(e instanceof Error ? e.message : 'Could not load the overview.');
+      }
     }
   }, [token, onAuthError]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  if (loadError) {
+    return (
+      <Card className="rounded-2xl">
+        <CardContent className="py-12 text-center">
+          <p className="font-medium text-foreground mb-1">Couldn't load the overview</p>
+          <p className="text-sm text-muted-foreground mb-4">{loadError}</p>
+          <Button variant="outline" className="rounded-full" onClick={() => void load()}>
+            Try again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!stats) {
     return (

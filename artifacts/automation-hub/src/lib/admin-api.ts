@@ -34,7 +34,15 @@ export async function adminFetch<T>(
   if (res.status === 404 && (!init?.method || init.method === 'GET')) {
     throw new AdminAuthError('Access denied');
   }
-  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  if (!res.ok) {
+    // Surface the server's explanation when it gives one.
+    let detail: string | null = null;
+    try {
+      const body = await res.json();
+      if (body && typeof body.detail === 'string') detail = body.detail;
+    } catch { /* non-JSON body */ }
+    throw new Error(detail ?? `Request failed (${res.status})`);
+  }
   return res.json() as Promise<T>;
 }
 

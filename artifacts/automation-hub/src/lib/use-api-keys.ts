@@ -133,12 +133,18 @@ export async function revokeKeyFor(templateId: string): Promise<void> {
   setState({ keys: state.keys.filter((k) => k.templateId !== templateId), error: null });
 }
 
-/** Revoke every key on this account (used by Settings "clear data"). */
+/** Revoke every key on this account (used by Settings "clear data").
+ * Throws if the key list can't be fetched or any individual revocation fails,
+ * so callers can tell the user the truth about what happened. */
 export async function revokeAllKeys(): Promise<void> {
   const res = await fetch(`${API_BASE}/keys`, { credentials: 'same-origin' });
-  if (res.ok) {
-    const keys: TemplateApiKey[] = await res.json();
-    await Promise.allSettled(keys.map((k) => revokeKeyFor(k.templateId)));
+  if (res.status === 401) return; // signed out: no server keys to revoke
+  if (!res.ok) throw new Error(`Could not list API keys (${res.status})`);
+  const keys: TemplateApiKey[] = await res.json();
+  const results = await Promise.allSettled(keys.map((k) => revokeKeyFor(k.templateId)));
+  const failed = results.filter((r) => r.status === 'rejected').length;
+  if (failed > 0) {
+    throw new Error(`${failed} of ${keys.length} API key${keys.length === 1 ? '' : 's'} could not be revoked`);
   }
 }
 

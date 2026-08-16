@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function Settings() {
-  const { settings, updateSettings, isLoaded: settingsLoaded, unauthorized: settingsUnauthorized } = useSettings();
+  const { settings, updateSettings, isLoaded: settingsLoaded, unauthorized: settingsUnauthorized, loadFailed: settingsLoadFailed, retryLoad: retrySettingsLoad } = useSettings();
   const { user, isLoaded } = useUser();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
@@ -69,10 +69,12 @@ export default function Settings() {
   const handleClearData = async () => {
     // Revoke server-issued API keys before dropping this browser's identity,
     // otherwise the keys stay active but become unmanageable.
+    let revokeFailed = false;
     try {
       await revokeAllKeys();
     } catch {
-      // Best effort — still clear local data.
+      // Still clear local data, but tell the user the truth below.
+      revokeFailed = true;
     }
     localStorage.removeItem('ai-automation-hub-flows');
     localStorage.removeItem('ai-automation-hub-activity');
@@ -82,12 +84,17 @@ export default function Settings() {
     localStorage.removeItem('ai-automation-hub-client-id');
     localStorage.removeItem('ai-automation-hub-settings'); // legacy local-only preference
     toast({
-      title: "Data cleared",
-      description: "All local flows, activity, and API keys have been deleted.",
+      title: revokeFailed ? "Data cleared, but keys may remain" : "Data cleared",
+      description: revokeFailed
+        ? "Local data was deleted, but some API keys could not be revoked on the server. They may still be active — try again later."
+        : "All local flows, activity, and API keys have been deleted.",
       variant: "destructive"
     });
-    // Hard refresh to reset context, respecting the app's base path
-    window.location.href = import.meta.env.BASE_URL;
+    // Give the toast time to be seen before the hard refresh resets context.
+    // On failure, wait longer so the warning registers.
+    window.setTimeout(() => {
+      window.location.href = import.meta.env.BASE_URL;
+    }, revokeFailed ? 5000 : 1500);
   };
 
   return (
@@ -206,6 +213,14 @@ export default function Settings() {
                         ? 'Sign in to receive weekly digests of your automation runs.'
                         : 'Receive weekly digests of your automation runs at your account email.'}
                     </p>
+                    {settingsLoadFailed && (
+                      <p className="text-sm text-destructive">
+                        Couldn't load your saved preference — the switch may not show the real setting.{' '}
+                        <button type="button" className="underline" onClick={retrySettingsLoad}>
+                          Try again
+                        </button>
+                      </p>
+                    )}
                   </div>
                   <Switch
                     checked={settings.notifications}
