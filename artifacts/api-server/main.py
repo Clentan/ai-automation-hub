@@ -21,9 +21,11 @@ from typing import Optional
 
 import httpx
 import jwt
+import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
+from psycopg_pool import ConnectionPool, PoolTimeout
 from pydantic import BaseModel, Field
 
 # Prefer the Supabase Postgres database when a valid connection string is
@@ -32,13 +34,68 @@ _supabase_url = (os.environ.get("SUPABASE_DB_URL") or "").strip()
 if _supabase_url and not _supabase_url.startswith(("postgresql://", "postgres://")):
     print("WARNING: SUPABASE_DB_URL is not a postgresql:// connection string; ignoring it.")
     _supabase_url = ""
-DATABASE_URL = _supabase_url or os.environ.get("DATABASE_URL")
+
+# Fallback: build the Supabase connection string from just the DB password.
+# The project ref and pooler host are fixed for this project.
+if not _supabase_url:
+    _supabase_pw = (os.environ.get("SUPABASE_DB_PASSWORD") or "").strip()
+    if _supabase_pw:
+        from urllib.parse import quote
+
+        _supabase_url = (
+            f"postgresql://postgres.bcgehbowoapsjijwzyaq:{quote(_supabase_pw, safe='')}"
+            "@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
+        )
+        print("Using Supabase connection built from SUPABASE_DB_PASSWORD.")
+_fallback_url = os.environ.get("DATABASE_URL")
+DATABASE_URL = _supabase_url or _fallback_url
 if not DATABASE_URL:
     raise RuntimeError("SUPABASE_DB_URL or DATABASE_URL environment variable is required")
 
-pool = ConnectionPool(DATABASE_URL, min_size=1, max_size=10, kwargs={"row_factory": dict_row})
+
+def _make_pool(url: str) -> ConnectionPool:
+    return ConnectionPool(url, min_size=1, max_size=10, kwargs={"row_factory": dict_row})
+
+
+pool = _make_pool(DATABASE_URL)
+
+# If the preferred (Supabase) database is unreachable at startup, fall back to
+# the built-in database so the app stays up instead of crashing. A warning is
+# printed; retry Supabase by restarting once it is reachable again.
+if _supabase_url and _fallback_url:
+    try:
+        with pool.connection(timeout=15) as _conn:
+            _conn.execute("SELECT 1")
+    except Exception as _exc:
+        print(f"WARNING: Supabase unreachable at startup ({_exc}); falling back to built-in database.")
+        try:
+            pool.close()
+        except Exception:
+            pass
+        DATABASE_URL = _fallback_url
+        pool = _make_pool(DATABASE_URL)
 
 app = FastAPI(title="AI Automation Hub API", docs_url="/api/docs", openapi_url="/api/openapi.json")
+
+
+# When the database is unreachable, answer with a clear 503 instead of a
+# generic 500 so the frontend can show users what is actually wrong.
+@app.exception_handler(psycopg.OperationalError)
+def _db_unavailable_handler(request: Request, exc: psycopg.OperationalError):
+    print(f"ERROR: database unavailable: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "The database is temporarily unavailable. Please try again in a moment."},
+    )
+
+
+@app.exception_handler(PoolTimeout)
+def _db_pool_timeout_handler(request: Request, exc: PoolTimeout):
+    print(f"ERROR: database pool timeout: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "The database is busy. Please try again in a moment."},
+    )
 
 # The frontend is served same-origin through the workspace proxy, so no
 # cross-origin access is required or allowed.
@@ -1187,11 +1244,26 @@ def put_settings(body: SettingsIn, user_id: str = Depends(require_user)):
         )
     return SettingsOut(emailNotifications=body.emailNotifications)
 
+def _keepalive_loop() -> None:
+    """Ping the database every 6 hours so a Supabase free-tier project never
+    goes inactive (Supabase pauses projects after ~7 days without activity)."""
+    interval = 6 * 60 * 60
+    while True:
+        try:
+            with db() as conn:
+                conn.execute("SELECT 1")
+            print("keepalive: database ping ok")
+        except Exception as exc:  # keep the loop alive no matter what
+            print(f"keepalive: database ping failed: {exc}")
+        time.sleep(interval)
+
+
 @app.on_event("startup")
 def _start_digest_thread() -> None:
     import threading
 
     threading.Thread(target=_digest_loop, name="weekly-digest", daemon=True).start()
+    threading.Thread(target=_keepalive_loop, name="db-keepalive", daemon=True).start()
 
 
 def _digest_html(runs: list[dict]) -> str:
