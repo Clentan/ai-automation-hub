@@ -48,3 +48,8 @@ Thumbs.db
 .cache/
 .local/
 artifacts/api-server/data/
+
+# generated caches
+.vite/
+__pycache__/
+*.pyc

@@ -22,7 +22,15 @@ One-click automations for everyday business work. The platform owner publishes r
 | [`artifacts/mobile`](artifacts/mobile) | **Mobile app** — Expo / React Native companion app (run history, templates) |
 | [`artifacts/pitch-deck`](artifacts/pitch-deck) | **Pitch deck** — 10-slide investor presentation built with React |
 
-Other folders (`packages/`, `scripts/`, etc.) are shared tooling used across the workspace.
+Supporting folders:
+
+| Folder | What it is |
+| --- | --- |
+| [`lib`](lib) | Shared libraries — database schema, API spec, generated API client and validation schemas |
+| [`scripts`](scripts) | Workspace tooling and maintenance scripts |
+| `attached_assets` | Images and files used by the apps (referenced from the web builds) |
+
+Root files like `package.json`, `pnpm-workspace.yaml`, `pyproject.toml`, and `.replit` are workspace configuration that keeps all apps building and running on Replit.
 
 ## Tech stack
 
