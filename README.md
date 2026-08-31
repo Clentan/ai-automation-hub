@@ -13,17 +13,15 @@ One-click automations for everyday business work. The platform owner publishes r
 - **Weekly digests** — a summary of activity delivered by email, with the schedule surviving server restarts.
 - **Owner admin dashboard** — usage metrics, user and key management, and template requests at `/admin`.
 
-## Architecture map
+## Start here
 
-The three core pieces, each with its own README:
-
-| Layer | Folder | Guide |
+| Folder | What it is | Real source code |
 | --- | --- | --- |
-| **Frontend** | [`artifacts/automation-hub`](artifacts/automation-hub) | [Frontend README](artifacts/automation-hub/README.md) — React web app: gallery, flows, settings, admin dashboard |
-| **Backend** | [`artifacts/api-server`](artifacts/api-server) | [Backend README](artifacts/api-server/README.md) — Python FastAPI API: auth, keys, runs, digests |
-| **Database** | [`lib/db`](lib/db) | [Database README](lib/db/README.md) — shared PostgreSQL schema package and migration workflow |
+| [`Front-end`](Front-end) | React web app — gallery, flows, settings, admin dashboard | [`artifacts/automation-hub`](artifacts/automation-hub) |
+| [`Back_end`](Back_end) | Python FastAPI API — auth, keys, runs, digests | [`artifacts/api-server`](artifacts/api-server) |
+| [`Database`](Database) | PostgreSQL data layer — tables, schema, connection | [`lib/db`](lib/db) |
 
-> The folders keep their current paths (under `artifacts/` and `lib/`) because Replit's preview, workflows, and publishing are wired to them — renaming them would break the running app. The READMEs above make each layer easy to find instead.
+> `Front-end`, `Back_end`, and `Database` are navigation folders — each contains a README pointing to the working source. The runnable code stays under `artifacts/` and `lib/` because Replit's preview, workflows, and publishing are wired to those paths; moving it would break the running app.
 
 ## Project structure
 
