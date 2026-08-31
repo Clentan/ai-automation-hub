@@ -2,6 +2,8 @@
 
 This folder is the **backend**: a Python FastAPI service that owns all data and business logic. Every route lives under the `/api` prefix.
 
+> **Dual layout:** on GitHub this folder is published as `Back_end/`; in the Replit workspace it lives at `artifacts/api-server/`. Relative links in this README (e.g. `../Database`) target the GitHub layout — locally, the database package is at `../../lib/db`.
+
 ## What it handles
 
 - **Templates catalogue** — public `GET /api/templates`; the owner manages templates through `/api/admin/templates`

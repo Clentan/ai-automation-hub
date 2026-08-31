@@ -2,6 +2,8 @@
 
 This folder is the **frontend**: the React web app users see in the browser — the template gallery, flows, activity, learn page, settings, and the owner admin dashboard.
 
+> **Dual layout:** on GitHub this folder is published as `Front-end/`; in the Replit workspace it lives at `artifacts/automation-hub/`. Relative links in this README (e.g. `../Back_end`) target the GitHub layout — locally, the backend is at `../api-server`.
+
 ## Tech
 
 - React 19 + TypeScript

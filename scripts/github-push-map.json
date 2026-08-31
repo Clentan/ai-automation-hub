@@ -1,0 +1,12 @@
+{
+  "_comment": "GitHub presentation layout for Clentan/ai-automation-hub. Every push to GitHub MUST remap local paths per pathMap and exclude paths matching exclude. See .agents/memory/github-push-method.md for the push procedure. After pushing, assert Front-end/, Back_end/, and Database/ exist remotely and artifacts/automation-hub, artifacts/api-server, lib/db do not.",
+  "pathMap": {
+    "artifacts/automation-hub/": "Front-end/",
+    "artifacts/api-server/": "Back_end/",
+    "lib/db/": "Database/"
+  },
+  "exclude": [
+    "artifacts/automation-hub/.replit-artifact/",
+    "artifacts/api-server/.replit-artifact/"
+  ]
+}
