@@ -1,4 +1,4 @@
-// Template catalog — mirrors artifacts/automation-hub/src/lib/data.ts
+// Template catalog — mirrors the web app's src/lib/data.ts
 export type TemplateType = 'Automated' | 'Scheduled' | 'Instant';
 
 export interface AutomationStep {

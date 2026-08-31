@@ -13,22 +13,13 @@ One-click automations for everyday business work. The platform owner publishes r
 - **Weekly digests** — a summary of activity delivered by email, with the schedule surviving server restarts.
 - **Owner admin dashboard** — usage metrics, user and key management, and template requests at `/admin`.
 
-## Start here
-
-| Folder | What it is | Real source code |
-| --- | --- | --- |
-| [`Front-end`](Front-end) | React web app — gallery, flows, settings, admin dashboard | [`artifacts/automation-hub`](artifacts/automation-hub) |
-| [`Back_end`](Back_end) | Python FastAPI API — auth, keys, runs, digests | [`artifacts/api-server`](artifacts/api-server) |
-| [`Database`](Database) | PostgreSQL data layer — tables, schema, connection | [`lib/db`](lib/db) |
-
-> `Front-end`, `Back_end`, and `Database` are navigation folders — each contains a README pointing to the working source. The runnable code stays under `artifacts/` and `lib/` because Replit's preview, workflows, and publishing are wired to those paths; moving it would break the running app.
-
 ## Project structure
 
 | Folder | What it is |
 | --- | --- |
-| [`artifacts/automation-hub`](artifacts/automation-hub) | **Frontend (web app)** — React front-end (template gallery, flows, settings, admin dashboard) |
-| [`artifacts/api-server`](artifacts/api-server) | **Backend (API server)** — Python FastAPI back-end (API routes, PostgreSQL, Clerk auth, admin API, digest scheduler) |
+| [`Front-end`](Front-end) | **Web app** — React front-end (template gallery, flows, settings, admin dashboard) |
+| [`Back_end`](Back_end) | **API server** — Python FastAPI back-end (API routes, PostgreSQL, Clerk auth, admin API, digest scheduler) |
+| [`Database`](Database) | **Database** — PostgreSQL data layer: tables, schema ownership, connection details |
 | [`artifacts/mobile`](artifacts/mobile) | **Mobile app** — Expo / React Native companion app (run history, templates) |
 | [`artifacts/pitch-deck`](artifacts/pitch-deck) | **Pitch deck** — 10-slide investor presentation built with React |
 
@@ -36,11 +27,11 @@ Supporting folders:
 
 | Folder | What it is |
 | --- | --- |
-| [`lib`](lib) | Shared libraries — database schema, API spec, generated API client and validation schemas |
+| [`lib`](lib) | Shared libraries — API spec, generated API client and validation schemas |
 | [`scripts`](scripts) | Workspace tooling and maintenance scripts |
 | `attached_assets` | Images and files used by the apps (referenced from the web builds) |
 
-Root files like `package.json`, `pnpm-workspace.yaml`, `pyproject.toml`, and `.replit` are workspace configuration that keeps all apps building and running on Replit.
+Root files like `package.json`, `pnpm-workspace.yaml`, `pyproject.toml`, and `.replit` are workspace configuration that keeps all apps building and running on Replit. (On Replit, the front-end, back-end, and database packages run from the workspace's internal `artifacts/` and `lib/` paths; this repository presents them as `Front-end`, `Back_end`, and `Database`.)
 
 ## Tech stack
 
