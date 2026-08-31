@@ -1,27 +1,28 @@
-# Database — Shared Database Package
+# Database — Where the Data Lives
 
-This folder is the **database** package of the workspace (`@workspace/db`). It holds TypeScript/Drizzle tooling for describing the PostgreSQL schema and pushing schema changes.
+This project's database is **PostgreSQL** (Supabase in production). This folder (`@workspace/db`) is currently **empty scaffolding** — a placeholder Drizzle/TypeScript package with no table definitions yet. It exists so future TypeScript services can share typed schema definitions, but nothing uses it today.
 
-## Where the real tables live today
+## Where the real schema lives
 
-The production schema is currently owned by the **backend**: the FastAPI server in [`../../artifacts/api-server`](../../artifacts/api-server) creates and migrates its tables on startup (`templates`, `user_api_keys`, `runs`, `template_requests`, `user_settings`, `digest_log`). This package's `src/schema` is scaffolding for any future TypeScript services that need typed access to the same database.
+The schema is owned by the **backend**: the FastAPI server in [`../../artifacts/api-server`](../../artifacts/api-server) creates its tables on startup with `CREATE TABLE IF NOT EXISTS` statements in `main.py`:
 
-## What's here
-
-| Path | What it is |
+| Table | Purpose |
 | --- | --- |
-| `src/schema` | Drizzle table definitions (one file per table, exported from `index.ts`) |
-| `drizzle.config.ts` | Configuration for pushing schema changes |
+| `templates` | The automation template catalogue (managed by the owner) |
+| `user_api_keys` | Per-template access keys, stored as SHA-256 hashes |
+| `runs` | Every template run, for run history |
+| `template_requests` | User requests for new templates |
+| `user_settings` | Per-user preferences (e.g. digest settings) |
+| `digest_log` | Record of sent weekly digest emails |
 
-## Safe migration workflow
+## How schema changes are made
 
-```bash
-# Apply schema changes to the development database
-pnpm --filter @workspace/db run push
-```
+1. Edit the `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` startup statements in `artifacts/api-server/main.py` (write them so re-running is harmless).
+2. Restart the API server — it applies the change to the development database on startup.
+3. When the app is published, the production server runs the same startup statements against the production database on its first boot.
 
-Never point migrations at the production database directly — schema changes go to development first, then reach production through the normal publish flow.
+There is no separate migration tool in use. The `drizzle-kit push` script in this package is part of the unused scaffolding — do not use it unless Drizzle schemas are actually added here first.
 
 ## Connection
 
-The database is PostgreSQL (Supabase). Connection strings are provided through environment variables (`SUPABASE_DB_URL` / `DATABASE_URL`) managed as Replit Secrets — no credentials are stored in this repository.
+Connection strings come from environment variables (`SUPABASE_DB_URL` / `SUPABASE_DB_PASSWORD`, with `DATABASE_URL` as fallback) managed as Replit Secrets — no credentials are stored in this repository.
