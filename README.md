@@ -13,12 +13,24 @@ One-click automations for everyday business work. The platform owner publishes r
 - **Weekly digests** — a summary of activity delivered by email, with the schedule surviving server restarts.
 - **Owner admin dashboard** — usage metrics, user and key management, and template requests at `/admin`.
 
+## Architecture map
+
+The three core pieces, each with its own README:
+
+| Layer | Folder | Guide |
+| --- | --- | --- |
+| **Frontend** | [`artifacts/automation-hub`](artifacts/automation-hub) | [Frontend README](artifacts/automation-hub/README.md) — React web app: gallery, flows, settings, admin dashboard |
+| **Backend** | [`artifacts/api-server`](artifacts/api-server) | [Backend README](artifacts/api-server/README.md) — Python FastAPI API: auth, keys, runs, digests |
+| **Database** | [`lib/db`](lib/db) | [Database README](lib/db/README.md) — shared PostgreSQL schema package and migration workflow |
+
+> The folders keep their current paths (under `artifacts/` and `lib/`) because Replit's preview, workflows, and publishing are wired to them — renaming them would break the running app. The READMEs above make each layer easy to find instead.
+
 ## Project structure
 
 | Folder | What it is |
 | --- | --- |
-| [`artifacts/automation-hub`](artifacts/automation-hub) | **Web app** — React front-end (template gallery, flows, settings, admin dashboard) |
-| [`artifacts/api-server`](artifacts/api-server) | **API server** — Python FastAPI back-end (API routes, PostgreSQL, Clerk auth, admin API, digest scheduler) |
+| [`artifacts/automation-hub`](artifacts/automation-hub) | **Frontend (web app)** — React front-end (template gallery, flows, settings, admin dashboard) |
+| [`artifacts/api-server`](artifacts/api-server) | **Backend (API server)** — Python FastAPI back-end (API routes, PostgreSQL, Clerk auth, admin API, digest scheduler) |
 | [`artifacts/mobile`](artifacts/mobile) | **Mobile app** — Expo / React Native companion app (run history, templates) |
 | [`artifacts/pitch-deck`](artifacts/pitch-deck) | **Pitch deck** — 10-slide investor presentation built with React |
 
